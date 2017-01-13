@@ -3,7 +3,6 @@ package ssdeep
 import (
 	"bufio"
 	"fmt"
-	"hash/fnv"
 	"math"
 	"os"
 )
@@ -11,12 +10,10 @@ import (
 var rollingWindow uint32 = 7
 var blockMin uint32 = 3
 var spamSumLength uint32 = 64
-
-func hash(s string) uint32 {
-	h := fnv.New32a()
-	h.Write([]byte(s))
-	return h.Sum32()
-}
+var b64String = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+var b64 = []byte(b64String)
+var hashPrime uint32 = 0x01000193
+var hashIinit uint32 = 0x28021967
 
 type rollingState struct {
 	window []byte
@@ -26,13 +23,35 @@ type rollingState struct {
 	n      uint32
 }
 
-func newRollingState() rollingState {
-	return rollingState{
-		window: make([]byte, rollingWindow),
+type SSDEEP struct {
+	rollingState rollingState
+	hashString1  string
+	hashString2  string
+	blockHash1   uint32
+	blockHash2   uint32
+}
+
+func NewSSDEEP() SSDEEP {
+	return SSDEEP{
+		blockHash1: hashIinit,
+		blockHash2: hashIinit,
+		rollingState: rollingState{
+			window: make([]byte, rollingWindow),
+		},
 	}
 }
 
-func rollHash(rs *rollingState, c byte) uint32 {
+func (sdeep *SSDEEP) newRollingState() {
+	sdeep.rollingState = rollingState{}
+	sdeep.rollingState.window = make([]byte, rollingWindow)
+}
+
+func sumHash(c byte, h uint32) uint32 {
+	return (h * hashPrime) ^ uint32(c)
+}
+
+func rollHash(sdeep *SSDEEP, c byte) uint32 {
+	rs := &sdeep.rollingState
 	rs.h2 -= rs.h1
 	rs.h2 += rollingWindow * uint32(c)
 	rs.h1 += uint32(c)
@@ -49,10 +68,6 @@ func rollHash(rs *rollingState, c byte) uint32 {
 
 func getBlockSize(n uint32) int {
 	blockInt := int(blockMin) * int(math.Exp2(math.Floor(math.Log2(float64(n/(spamSumLength*blockMin))))))
-	/*blockInt := blockMin
-	for blockInt*spamSumLength < n {
-		blockInt = blockInt * 2
-	}*/
 	return int(blockInt)
 }
 
@@ -64,27 +79,38 @@ func getFileSize(f *os.File) uint32 {
 	return uint32(fi.Size())
 }
 
-func getBlocks() {
-	f, err := os.Open("/tmp/dat")
-	if err != nil {
-		panic(err)
-	}
-
-	n := getFileSize(f)
-	blockInt := getBlockSize(n)
-	fmt.Printf("block size: %d, file size: %d, bs/n: %d\n", blockInt, n, int(n)/blockInt)
-
-	rs := newRollingState()
+func getBlock(f *os.File, blockInt int, sdeep *SSDEEP) {
 	r := bufio.NewReader(f)
+	sdeep.newRollingState()
 	b, err := r.ReadByte()
-	nb := 0
 	for err == nil {
-		h := int(rollHash(&rs, b))
-		//fmt.Printf("state: %d, trigger %d\n", h%blockInt, blockInt-1)
-		if h%blockInt == (blockInt - 1) {
-			nb++
+		sdeep.blockHash1 = sumHash(b, sdeep.blockHash1)
+		sdeep.blockHash2 = sumHash(b, sdeep.blockHash2)
+		rh := int(rollHash(sdeep, b))
+		if rh%blockInt == (blockInt - 1) {
+			sdeep.hashString1 += string(b64[sdeep.blockHash1%64])
+			sdeep.blockHash1 = hashIinit
+			sdeep.newRollingState()
+		}
+		if rh%(blockInt*2) == ((blockInt * 2) - 1) {
+			sdeep.hashString2 += string(b64[sdeep.blockHash2%64])
+			sdeep.blockHash2 = hashIinit
 		}
 		b, err = r.ReadByte()
 	}
-	fmt.Println(nb)
+	sdeep.hashString1 += string(b64[sdeep.blockHash1%64])
+	sdeep.hashString2 += string(b64[sdeep.blockHash2%64])
+}
+
+func Fuzzy(fileLocation string) {
+	sdeep := NewSSDEEP()
+	f, err := os.Open(fileLocation)
+	if err != nil {
+		panic(err)
+	}
+	n := getFileSize(f)
+	blockInt := getBlockSize(n)
+	fmt.Printf("block size: %d, file size: %d, bs/n: %d\n", blockInt, n, int(n)/blockInt)
+	getBlock(f, blockInt, &sdeep)
+	fmt.Printf("%d:%s:%s,\"%s\"\n", blockInt, sdeep.hashString1, sdeep.hashString2, fileLocation)
 }
