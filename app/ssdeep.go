@@ -13,5 +13,6 @@ func main() {
 		fmt.Println("Please provide a file path: ./ssdeep /tmp/file")
 		return
 	}
-	ssdeep.Fuzzy(flag.Args()[0])
+	sdeep := ssdeep.NewSSDEEP()
+	sdeep.Fuzzy(flag.Args()[0])
 }

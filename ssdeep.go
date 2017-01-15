@@ -33,7 +33,8 @@ type SSDEEP struct {
 	blockHash2   uint32
 }
 
-func newSSDEEP() SSDEEP {
+// NewSSDEEP creates a new SSDEEP hash
+func NewSSDEEP() SSDEEP {
 	return SSDEEP{
 		blockHash1: hashIinit,
 		blockHash2: hashIinit,
