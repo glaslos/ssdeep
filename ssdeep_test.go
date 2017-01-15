@@ -7,22 +7,17 @@ import (
 	"testing"
 )
 
-func TestTimeConsuming(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode.")
-	}
-}
-
 func TestRollingHash(t *testing.T) {
-	sdeep := NewSSDEEP()
-	if rollHash(&sdeep, byte('A')) != 585 {
+	sdeep := newSSDEEP()
+	if sdeep.rollHash(byte('A')) != 585 {
 		t.Error("Rolling hash not matching")
 	}
 }
 
 func TestFindBlock(t *testing.T) {
-	Fuzzy("/tmp/dat")
-	out, err := exec.Command("ssdeep", "/tmp/dat").Output()
+	sdeep := newSSDEEP()
+	sdeep.Fuzzy("/tmp/data")
+	out, err := exec.Command("ssdeep", "/tmp/data").Output()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -30,8 +25,8 @@ func TestFindBlock(t *testing.T) {
 }
 
 func BenchmarkRollingHash(b *testing.B) {
-	sdeep := NewSSDEEP()
+	sdeep := newSSDEEP()
 	for i := 0; i < b.N; i++ {
-		rollHash(&sdeep, byte(i))
+		sdeep.rollHash(byte(i))
 	}
 }
