@@ -1,57 +1,62 @@
+// Copyright (c) 2015, Arbo von Monkiewitsch All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package ssdeep
 
-import "math"
+// The Levenshtein distance between two strings is defined as the minimum
+// number of edits needed to transform one string into the other, with the
+// allowable edit operations being insertion, deletion, or substitution of
+// a single character
+// http://en.wikipedia.org/wiki/Levenshtein_distance
+//
+// This implemention is optimized to use O(min(m,n)) space.
+// It is based on the optimized C version found here:
+// http://en.wikibooks.org/wiki/Algorithm_implementation/Strings/Levenshtein_distance#C
 
-// minInt32 finds the minimum int32 value of a range of int.
-// MinInt32  = -1 << 31
-func minInt32(a ...int) int {
-	min := math.MaxInt32
-	for _, i := range a {
-		if i < min {
-			min = i
+// Distance between two strings
+func Distance(str1, str2 string) int {
+	var cost, lastdiag, olddiag int
+	s1 := []rune(str1)
+	s2 := []rune(str2)
+
+	lenS1 := len(s1)
+	lenS2 := len(s2)
+
+	column := make([]int, lenS1+1)
+
+	for y := 1; y <= lenS1; y++ {
+		column[y] = y
+	}
+
+	for x := 1; x <= lenS2; x++ {
+		column[0] = x
+		lastdiag = x - 1
+		for y := 1; y <= lenS1; y++ {
+			olddiag = column[y]
+			cost = 0
+			if s1[y-1] != s2[x-1] {
+				cost = 1
+			}
+			column[y] = min(
+				column[y]+1,
+				column[y-1]+1,
+				lastdiag+cost)
+			lastdiag = olddiag
 		}
 	}
-	return min
+	return column[lenS1]
 }
 
-func levEditDistance(s1, s2 string) (distance int) {
-	// index by code point, not byte
-	r1 := []rune(s1)
-	r2 := []rune(s2)
-
-	rows := len(r1) + 1
-	cols := len(r2) + 1
-
-	var d1 int
-	var d2 int
-	var d3 int
-	var i int
-	var j int
-	dist := make([]int, rows*cols)
-
-	for i = 0; i < rows; i++ {
-		dist[i*cols] = i
-	}
-
-	for j = 0; j < cols; j++ {
-		dist[j] = j
-	}
-
-	for j = 1; j < cols; j++ {
-		for i = 1; i < rows; i++ {
-			if r1[i-1] == r2[j-1] {
-				dist[(i*cols)+j] = dist[((i-1)*cols)+(j-1)]
-			} else {
-				d1 = dist[((i-1)*cols)+j] + 1
-				d2 = dist[(i*cols)+(j-1)] + 1
-				d3 = dist[((i-1)*cols)+(j-1)] + 1
-
-				dist[(i*cols)+j] = minInt32(d1, minInt32(d2, d3))
-			}
+func min(a, b, c int) int {
+	if a < b {
+		if a < c {
+			return a
+		}
+	} else {
+		if b < c {
+			return b
 		}
 	}
-
-	distance = dist[(cols*rows)-1]
-
-	return
+	return c
 }

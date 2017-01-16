@@ -3,6 +3,7 @@ package ssdeep
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"os/exec"
 	"testing"
 )
@@ -31,8 +32,16 @@ func BenchmarkRollingHash(b *testing.B) {
 	}
 }
 
-func BenchmarkEditDistance(b *testing.B) {
+func BenchmarkLev1Distance(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		levEditDistance("aaa123123123123aaaa", "aab123123123aaaa")
+		Distance("aaa123123123123aaaa", "aab123123123aaaa")
+	}
+}
+
+func BenchmarkSumHash(b *testing.B) {
+	testHash := hashIinit
+	data := []byte("Hereyougojustsomedatatomakeyouhappy")
+	for i := 0; i < b.N; i++ {
+		testHash = sumHash(data[rand.Intn(len(data))], testHash)
 	}
 }
