@@ -8,14 +8,14 @@ import (
 )
 
 func TestRollingHash(t *testing.T) {
-	sdeep := newSSDEEP()
+	sdeep := NewSSDEEP()
 	if sdeep.rollHash(byte('A')) != 585 {
 		t.Error("Rolling hash not matching")
 	}
 }
 
 func TestFindBlock(t *testing.T) {
-	sdeep := newSSDEEP()
+	sdeep := NewSSDEEP()
 	sdeep.Fuzzy("/tmp/data")
 	out, err := exec.Command("ssdeep", "/tmp/data").Output()
 	if err != nil {
@@ -25,8 +25,14 @@ func TestFindBlock(t *testing.T) {
 }
 
 func BenchmarkRollingHash(b *testing.B) {
-	sdeep := newSSDEEP()
+	sdeep := NewSSDEEP()
 	for i := 0; i < b.N; i++ {
 		sdeep.rollHash(byte(i))
+	}
+}
+
+func BenchmarkEditDistance(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		levEditDistance("aaa123123123123aaaa", "aab123123123aaaa")
 	}
 }
