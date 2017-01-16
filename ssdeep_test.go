@@ -25,6 +25,13 @@ func TestFindBlock(t *testing.T) {
 	fmt.Println(string(out))
 }
 
+func TestKittenDistance(t *testing.T) {
+	d := Distance("kitten", "sitting")
+	if d != 3 {
+		t.Errorf("Invalid edit distance: %d", d)
+	}
+}
+
 func BenchmarkRollingHash(b *testing.B) {
 	sdeep := NewSSDEEP()
 	for i := 0; i < b.N; i++ {
@@ -32,7 +39,7 @@ func BenchmarkRollingHash(b *testing.B) {
 	}
 }
 
-func BenchmarkLev1Distance(b *testing.B) {
+func BenchmarkDistance(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		Distance("aaa123123123123aaaa", "aab123123123aaaa")
 	}
