@@ -70,6 +70,7 @@ func scoreDistance(h1, h2 string, blockSize int) int {
 	return d
 }
 
+// Copyright (c) 2015, Arbo von Monkiewitsch All rights reserved.
 func distance(str1, str2 string) int {
 	var cost, lastdiag, olddiag int
 	s1 := []rune(str1)

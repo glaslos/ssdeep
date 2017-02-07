@@ -121,7 +121,7 @@ func (sdeep *SSDEEP) processFile(f *os.File) {
 }
 
 // Fuzzy hash of a provided file
-func (sdeep *SSDEEP) Fuzzy(fileLocation string) {
+func (sdeep *SSDEEP) Fuzzy(fileLocation string) string {
 	f, err := os.Open(fileLocation)
 	defer f.Close()
 	if err != nil {
@@ -134,5 +134,5 @@ func (sdeep *SSDEEP) Fuzzy(fileLocation string) {
 	sdeep.getBlockSize(n)
 	fmt.Printf("block size: %d, file size: %d, n/bs: %d\n", sdeep.blockSize, n, n/sdeep.blockSize)
 	sdeep.processFile(f)
-	fmt.Printf("%d:%s:%s,\"%s\"\n", sdeep.blockSize, sdeep.hashString1, sdeep.hashString2, fileLocation)
+	return fmt.Sprintf("%d:%s:%s,\"%s\"", sdeep.blockSize, sdeep.hashString1, sdeep.hashString2, fileLocation)
 }
