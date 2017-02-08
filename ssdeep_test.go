@@ -30,12 +30,6 @@ func BenchmarkRollingHash(b *testing.B) {
 	}
 }
 
-func BenchmarkDistance(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		distance("aaa123123123123aaaa", "aab123123123aaaa")
-	}
-}
-
 func BenchmarkSumHash(b *testing.B) {
 	testHash := hashIinit
 	data := []byte("Hereyougojustsomedatatomakeyouhappy")

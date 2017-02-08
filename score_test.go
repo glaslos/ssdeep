@@ -79,3 +79,11 @@ func TestHashDistanceLengthFail2(t *testing.T) {
 		t.Errorf("%s", "Expected error, got nil")
 	}
 }
+
+func BenchmarkDistance(b *testing.B) {
+	var h1 = `7DSC8olnoL1v/uawvbQD7XlZUFYzYyMb615NktYHF7dREN/JNnQrmhnUPI+/n2Y7`
+	var h2 = `7DSC8olnoL1v/uawvbQD7XlZUFYzYyMb615NktYHF7dREN/JNnQrmhnUPI+/ngrr`
+	for i := 0; i < b.N; i++ {
+		distance(h1, h2)
+	}
+}
