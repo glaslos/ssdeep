@@ -9,7 +9,9 @@ import (
 
 var rollingWindow uint32 = 7
 var blockMin = 3
-var spamSumLength = 64
+
+const spamSumLength = 64
+
 var b64String = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 var b64 = []byte(b64String)
 var hashPrime uint32 = 0x01000193

@@ -2,13 +2,6 @@ package ssdeep
 
 import "testing"
 
-func TestKittenDistance(t *testing.T) {
-	d := distance("kitten", "sitting")
-	if d != 3 {
-		t.Errorf("Invalid edit distance: %d", d)
-	}
-}
-
 var h1 = `196608:7DSC8olnoL1v/uawvbQD7XlZUFYzYyMb615NktYHF7dREN/JNnQrmhnUPI+/n2Y7:3DHoJXv7XOq7Mb2TwYHXREN/3QrmktPt,"/tmp/ssdeep/data"`
 var h2 = `196608:pDSC8olnoL1v/uawvbQD7XlZUFYzYyMb615NktYHF7dREN/JNnQrmhnUPI+/n2Yr:5DHoJXv7XOq7Mb2TwYHXREN/3QrmktPd,"/tmp/ssdeep/data2"`
 var h3 = `196607:pDSC8olnoL1v/uawvbQD7XlZUFYzYyMb615NktYHF7dREN/JNnQrmhnUPI+/n2Yr:5DHoJXv7XOq7Mb2TwYHXREN/3QrmktPd,"/tmp/ssdeep/data2"`
@@ -27,7 +20,7 @@ func TestHashDistanceSame(t *testing.T) {
 
 func TestHashDistance(t *testing.T) {
 	d, err := HashDistance(h1, h2)
-	if d != 99 {
+	if d != 97 {
 		t.Errorf("Invalid edit distance: %d", d)
 	}
 	if err != nil {
@@ -37,7 +30,7 @@ func TestHashDistance(t *testing.T) {
 
 func TestHashDistanceNoName(t *testing.T) {
 	d, err := HashDistance(h2, h4)
-	if d != 99 {
+	if d != 97 {
 		t.Errorf("Invalid edit distance: %d", d)
 	}
 	if err != nil {
