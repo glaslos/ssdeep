@@ -2,6 +2,7 @@ package ssdeep
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"math"
 	"os"
@@ -109,8 +110,11 @@ func (sdeep *SSDEEP) processByte(b byte) {
 	}
 }
 
-func (sdeep *SSDEEP) processFile(f *os.File) {
-	r := bufio.NewReader(f)
+type fuzzyReader interface {
+	ReadByte() (byte, error)
+}
+
+func (sdeep *SSDEEP) process(r fuzzyReader) {
 	sdeep.newRollingState()
 	b, err := r.ReadByte()
 	for err == nil {
@@ -120,6 +124,11 @@ func (sdeep *SSDEEP) processFile(f *os.File) {
 	// Finalize the hash string with the remaining data
 	sdeep.hashString1 += string(b64[sdeep.blockHash1%64])
 	sdeep.hashString2 += string(b64[sdeep.blockHash2%64])
+}
+
+func (sdeep *SSDEEP) processFile(f *os.File) {
+	r := bufio.NewReader(f)
+	sdeep.process(r)
 }
 
 // Fuzzy hash of a provided file
@@ -134,7 +143,15 @@ func (sdeep *SSDEEP) Fuzzy(fileLocation string) string {
 		panic(err)
 	}
 	sdeep.getBlockSize(n)
-	fmt.Printf("block size: %d, file size: %d, n/bs: %d\n", sdeep.blockSize, n, n/sdeep.blockSize)
 	sdeep.processFile(f)
 	return fmt.Sprintf("%d:%s:%s,\"%s\"", sdeep.blockSize, sdeep.hashString1, sdeep.hashString2, fileLocation)
+}
+
+// FuzzyByte hash of a provided byte array
+func (sdeep *SSDEEP) FuzzyByte(blob []byte) string {
+	dataLen := len(blob)
+	sdeep.getBlockSize(dataLen)
+	r := bytes.NewReader(blob)
+	sdeep.process(r)
+	return fmt.Sprintf("%d:%s:%s", sdeep.blockSize, sdeep.hashString1, sdeep.hashString2)
 }

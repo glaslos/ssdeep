@@ -1,6 +1,10 @@
 package ssdeep
 
-import "testing"
+import (
+	"testing"
+
+	cssdeep "github.com/dutchcoders/gossdeep"
+)
 
 var h1 = `196608:7DSC8olnoL1v/uawvbQD7XlZUFYzYyMb615NktYHF7dREN/JNnQrmhnUPI+/n2Y7:3DHoJXv7XOq7Mb2TwYHXREN/3QrmktPt,"/tmp/ssdeep/data"`
 var h2 = `196608:pDSC8olnoL1v/uawvbQD7XlZUFYzYyMb615NktYHF7dREN/JNnQrmhnUPI+/n2Yr:5DHoJXv7XOq7Mb2TwYHXREN/3QrmktPd,"/tmp/ssdeep/data2"`
@@ -85,5 +89,13 @@ func BenchmarkDistance(b *testing.B) {
 	var h2 = `7DSC8olnoL1v/uawvbQD7XlZUFYzYyMb615NktYHF7dREN/JNnQrmhnUPI+/ngrr`
 	for i := 0; i < b.N; i++ {
 		distance(h1, h2)
+	}
+}
+
+func BenchmarkDistanceC(b *testing.B) {
+	var h1 = `7DSC8olnoL1v/uawvbQD7XlZUFYzYyMb615NktYHF7dREN/JNnQrmhnUPI+/n2Y7`
+	var h2 = `7DSC8olnoL1v/uawvbQD7XlZUFYzYyMb615NktYHF7dREN/JNnQrmhnUPI+/ngrr`
+	for i := 0; i < b.N; i++ {
+		cssdeep.Compare(h1, h2)
 	}
 }

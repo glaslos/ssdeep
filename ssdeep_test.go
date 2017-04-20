@@ -1,9 +1,11 @@
 package ssdeep
 
 import (
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"os/exec"
+	"strings"
 	"testing"
 )
 
@@ -14,12 +16,31 @@ func TestRollingHash(t *testing.T) {
 	}
 }
 
-func TestFindBlock(t *testing.T) {
+func TestCompareHashFile(t *testing.T) {
 	sdeep := NewSSDEEP()
-	sdeep.Fuzzy("/tmp/data")
-	_, err := exec.Command("ssdeep", "/tmp/data").Output()
+	libhash := sdeep.Fuzzy("/tmp/data")
+	out, err := exec.Command("ssdeep", "/tmp/data").Output()
 	if err != nil {
 		log.Fatal(err)
+	}
+	if strings.Split(string(out[:]), "\n")[1] != libhash {
+		t.Error("Hash mismatch")
+	}
+}
+
+func TestCompareHashBytes(t *testing.T) {
+	blob, err := ioutil.ReadFile("/tmp/data")
+	if err != nil {
+		t.Error(err)
+	}
+	sdeep := NewSSDEEP()
+	libhash := sdeep.FuzzyByte(blob)
+	out, err := exec.Command("ssdeep", "/tmp/data").Output()
+	if err != nil {
+		t.Error(err)
+	}
+	if strings.Split(string(out[:]), "\n")[1] != libhash+",\"/tmp/data\"" {
+		t.Error("Hash mismatch")
 	}
 }
 
