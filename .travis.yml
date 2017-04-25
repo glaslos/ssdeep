@@ -2,7 +2,7 @@ language: go
 
 before_install:
   - sudo apt-get -qq update
-  - sudo apt-get install -y ssdeep
+  - sudo apt-get install -y ssdeep libfuzzy-dev
 
 install:
   - go get github.com/dutchcoders/gossdeep
