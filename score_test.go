@@ -1,10 +1,6 @@
 package ssdeep
 
-import (
-	"testing"
-
-	cssdeep "github.com/dutchcoders/gossdeep"
-)
+import "testing"
 
 func TestHashDistanceSame(t *testing.T) {
 	d := Distance(&h1, &h1)
@@ -53,13 +49,5 @@ func BenchmarkDistance(b *testing.B) {
 	var h2 = `7DSC8olnoL1v/uawvbQD7XlZUFYzYyMb615NktYHF7dREN/JNnQrmhnUPI+/ngrr`
 	for i := 0; i < b.N; i++ {
 		distance(h1, h2)
-	}
-}
-
-func BenchmarkDistanceC(b *testing.B) {
-	var h1 = `7DSC8olnoL1v/uawvbQD7XlZUFYzYyMb615NktYHF7dREN/JNnQrmhnUPI+/n2Y7`
-	var h2 = `7DSC8olnoL1v/uawvbQD7XlZUFYzYyMb615NktYHF7dREN/JNnQrmhnUPI+/ngrr`
-	for i := 0; i < b.N; i++ {
-		cssdeep.Compare(h1, h2)
 	}
 }
