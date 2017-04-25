@@ -3,6 +3,7 @@ package ssdeep
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -13,6 +14,7 @@ const (
 	rollingWindow uint32 = 7
 	blockMin             = 3
 	spamSumLength        = 64
+	minFileSize          = 4096
 	hashPrime     uint32 = 0x01000193
 	hashIinit     uint32 = 0x28021967
 	b64String            = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
@@ -148,13 +150,16 @@ func (sdeep *SSDEEP) process(r fuzzyReader) {
 }
 
 // FuzzyReader hash of a provided reader
-func (sdeep *SSDEEP) FuzzyReader(r fuzzyReader, fileLocation string) *FuzzyHash {
+func (sdeep *SSDEEP) FuzzyReader(r fuzzyReader, fileLocation string) (*FuzzyHash, error) {
 	// This is not optimal as you have to read the whole file into memory
 	if sdeep.blockSize == 0 {
 		buf := &bytes.Buffer{}
 		n, err := io.Copy(buf, r)
 		if err != nil {
-			panic(err)
+			return nil, err
+		}
+		if n < minFileSize {
+			return nil, errors.New("Did not process files large enough to produce meaningful results")
 		}
 		sdeep.getBlockSize(int(n))
 	}
@@ -164,19 +169,22 @@ func (sdeep *SSDEEP) FuzzyReader(r fuzzyReader, fileLocation string) *FuzzyHash 
 		hashString1:  sdeep.hashString1,
 		hashString2:  sdeep.hashString2,
 		fileLocation: fileLocation,
-	}
+	}, nil
 }
 
 // Fuzzy hash of a provided file
-func (sdeep *SSDEEP) Fuzzy(fileLocation string) *FuzzyHash {
+func (sdeep *SSDEEP) Fuzzy(fileLocation string) (*FuzzyHash, error) {
 	f, err := os.Open(fileLocation)
 	defer f.Close()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	n, err := getFileSize(f)
 	if err != nil {
-		panic(err)
+		return nil, err
+	}
+	if n < minFileSize {
+		return nil, errors.New("Did not process files large enough to produce meaningful results")
 	}
 	sdeep.getBlockSize(n)
 	r := bufio.NewReader(f)
@@ -184,9 +192,12 @@ func (sdeep *SSDEEP) Fuzzy(fileLocation string) *FuzzyHash {
 }
 
 // FuzzyByte hash of a provided byte array
-func (sdeep *SSDEEP) FuzzyByte(blob []byte) *FuzzyHash {
-	dataLen := len(blob)
-	sdeep.getBlockSize(dataLen)
+func (sdeep *SSDEEP) FuzzyByte(blob []byte) (*FuzzyHash, error) {
+	n := len(blob)
+	if n < minFileSize {
+		return nil, errors.New("Did not process files large enough to produce meaningful results")
+	}
+	sdeep.getBlockSize(n)
 	r := bytes.NewReader(blob)
 	return sdeep.FuzzyReader(r, "")
 }
