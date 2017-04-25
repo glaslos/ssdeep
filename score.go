@@ -7,6 +7,30 @@ import (
 	"strings"
 )
 
+// Distance between two strings
+func Distance(hash1, hash2 *FuzzyHash) (score int) {
+	if hash1 == nil || hash2 == nil {
+		return 0
+	}
+	// We can only compare equal or *2 block sizes
+	if hash1.blockSize != hash2.blockSize && hash1.blockSize != hash2.blockSize*2 && hash2.blockSize != hash1.blockSize*2 {
+		return
+	}
+	if hash1.blockSize == hash2.blockSize && hash1.hashString1 == hash2.hashString1 {
+		return 100
+	}
+	if hash1.blockSize == hash2.blockSize {
+		d1 := scoreDistance(hash1.hashString1, hash2.hashString1, hash1.blockSize)
+		d2 := scoreDistance(hash1.hashString2, hash2.hashString2, hash1.blockSize*2)
+		score = int(math.Max(float64(d1), float64(d2)))
+	} else if hash1.blockSize == hash2.blockSize*2 {
+		score = scoreDistance(hash1.hashString1, hash2.hashString2, hash1.blockSize)
+	} else {
+		score = scoreDistance(hash1.hashString2, hash2.hashString1, hash2.blockSize)
+	}
+	return
+}
+
 // HashDistance between two strings
 func HashDistance(str1, str2 string) (int, error) {
 	if str1 == "" || str2 == "" {

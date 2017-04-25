@@ -23,11 +23,7 @@ func main() {
 		sdeep = ssdeep.NewSSDEEP()
 		h2 := sdeep.Fuzzy(flag.Args()[1])
 		fmt.Printf("%s\n%s\n", h1, h2)
-		score, err := ssdeep.HashDistance(h1, h2)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
+		score := ssdeep.Distance(h1, h2)
 		fmt.Println(score)
 	}
 }
