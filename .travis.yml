@@ -3,3 +3,6 @@ language: go
 before_install:
   - sudo apt-get -qq update
   - sudo apt-get install -y ssdeep
+
+install:
+  - go get github.com/dutchcoders/gossdeep
