@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"os"
 )
 
@@ -94,10 +93,7 @@ func (sdeep *SSDEEP) rollHash(c byte) uint32 {
 }
 
 func (sdeep *SSDEEP) getBlockSize(n int) {
-	blockSize := blockMin * int(math.Exp2(math.Floor(math.Log2(float64(n/(spamSumLength*blockMin))))))
-	if blockSize < blockMin {
-		blockSize = blockMin
-	}
+	blockSize := blockMin
 	for blockSize*spamSumLength < n {
 		blockSize = blockSize * 2
 	}

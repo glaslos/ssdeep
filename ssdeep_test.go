@@ -116,3 +116,10 @@ func BenchmarkSumHash(b *testing.B) {
 		testHash = sumHash(data[rand.Intn(len(data))], testHash)
 	}
 }
+
+func BenchmarkBlockSize(b *testing.B) {
+	sdeep := NewSSDEEP()
+	for i := 0; i < b.N; i++ {
+		sdeep.getBlockSize(207160)
+	}
+}
