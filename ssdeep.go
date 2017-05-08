@@ -1,3 +1,5 @@
+// +build amd64
+
 package ssdeep
 
 import (
@@ -70,10 +72,17 @@ func (sdeep *SSDEEP) newRollingState() {
 	sdeep.rollingState.window = make([]byte, rollingWindow)
 }
 
+//go:generate python3 -m peachpy.x86_64 sum_hash.py -S -o sum_hash.s -mabi=goasm
+func sumHashASM(a uint32, b uint32, c uint32) uint32
+
 // sumHash based on FNV hash
-func sumHash(c byte, h uint32) uint32 {
-	return (h * hashPrime) ^ uint32(c)
+func sumHash(c uint32, h uint32) uint32 {
+	return (h * hashPrime) ^ c
 }
+
+//go:generate python3 -m peachpy.x86_64 roll_hash.py -S -o roll_hash.s -mabi=goasm
+//go:noescape
+func rollHashASM(rs *rollingState, c uint32) uint32
 
 // rollHash based on Adler checksum
 func (sdeep *SSDEEP) rollHash(c byte) uint32 {
@@ -109,8 +118,8 @@ func getFileSize(f *os.File) (int, error) {
 }
 
 func (sdeep *SSDEEP) processByte(b byte) {
-	sdeep.blockHash1 = sumHash(b, sdeep.blockHash1)
-	sdeep.blockHash2 = sumHash(b, sdeep.blockHash2)
+	sdeep.blockHash1 = sumHash(uint32(b), sdeep.blockHash1)
+	sdeep.blockHash2 = sumHash(uint32(b), sdeep.blockHash2)
 	rh := int(sdeep.rollHash(b))
 	if rh%sdeep.blockSize == (sdeep.blockSize - 1) {
 		if len(sdeep.hashString1) < spamSumLength-1 {

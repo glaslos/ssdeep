@@ -109,11 +109,26 @@ func BenchmarkRollingHash(b *testing.B) {
 	}
 }
 
+func BenchmarkRollingHashASM(b *testing.B) {
+	sdeep := NewSSDEEP()
+	for i := 0; i < b.N; i++ {
+		rollHashASM(&sdeep.rollingState, uint32(i))
+	}
+}
+
 func BenchmarkSumHash(b *testing.B) {
 	testHash := hashIinit
 	data := []byte("Hereyougojustsomedatatomakeyouhappy")
 	for i := 0; i < b.N; i++ {
-		testHash = sumHash(data[rand.Intn(len(data))], testHash)
+		testHash = sumHash(uint32(data[rand.Intn(len(data))]), testHash)
+	}
+}
+
+func BenchmarkSumHashASM(b *testing.B) {
+	testHash := hashIinit
+	data := []byte("Hereyougojustsomedatatomakeyouhappy")
+	for i := 0; i < b.N; i++ {
+		testHash = sumHashASM(uint32(data[rand.Intn(len(data))]), testHash, hashPrime)
 	}
 }
 
