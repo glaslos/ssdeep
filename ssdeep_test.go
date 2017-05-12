@@ -2,13 +2,33 @@ package ssdeep
 
 import (
 	"bufio"
+	"bytes"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"os"
 	"os/exec"
 	"strings"
 	"testing"
 )
+
+func readFile(filePath string) ([]byte, error) {
+	f, err := os.Open(filePath)
+	defer f.Close()
+	if err != nil {
+		return nil, err
+	}
+	r := bufio.NewReader(f)
+	buf := &bytes.Buffer{}
+	_, err = io.Copy(buf, r)
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
 
 var h1 = FuzzyHash{
 	blockSize:   192,
@@ -49,7 +69,11 @@ func TestRollingHash(t *testing.T) {
 
 func TestCompareHashFile(t *testing.T) {
 	sdeep := NewSSDEEP()
-	libhash, err := sdeep.Fuzzy("/tmp/data")
+	b, err := readFile("/tmp/data")
+	if err != nil {
+		t.Error(err)
+	}
+	libhash, err := sdeep.FuzzyByte(b)
 	if err != nil {
 		t.Error(err)
 	}
@@ -57,27 +81,15 @@ func TestCompareHashFile(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if strings.Split(string(out[:]), "\n")[1] != libhash.String() {
-		t.Error("Hash mismatch")
+	hash2 := strings.Split(strings.Split(string(out[:]), "\n")[1], ",")[0]
+	if hash2 != libhash.String() {
+		t.Errorf("Hash mismatch: %s vs %s", hash2, libhash.String())
 	}
 }
 
 func TestEmptyByte(t *testing.T) {
 	sdeep := NewSSDEEP()
 	_, err := sdeep.FuzzyByte([]byte{})
-	if err == nil {
-		t.Error("Expecting error for empty file")
-	}
-}
-
-func TestEmptyFile(t *testing.T) {
-	f, err := ioutil.TempFile("/tmp", "ssdeep-test")
-	if err != nil {
-		log.Fatal(err)
-	}
-	sdeep := NewSSDEEP()
-	r := bufio.NewReader(f)
-	_, err = sdeep.FuzzyReader(r, f.Name())
 	if err == nil {
 		t.Error("Expecting error for empty file")
 	}
