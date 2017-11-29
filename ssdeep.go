@@ -1,10 +1,10 @@
 package ssdeep
 
 import (
+	"bufio"
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 )
 
@@ -91,7 +91,8 @@ func (sdeep *SSDEEP) rollHash(c byte) uint32 {
 	return rs.h1 + rs.h2 + rs.h3
 }
 
-func (sdeep *SSDEEP) getBlockSize(n int) {
+// GetBlockSize calculates the block size based on file size
+func (sdeep *SSDEEP) GetBlockSize(n int) {
 	blockSize := blockMin
 	for blockSize*spamSumLength < n {
 		blockSize = blockSize * 2
@@ -99,7 +100,8 @@ func (sdeep *SSDEEP) getBlockSize(n int) {
 	sdeep.blockSize = blockSize
 }
 
-func getFileSize(f *os.File) (int, error) {
+// GetFileSize returns the files size
+func GetFileSize(f *os.File) (int, error) {
 	fi, err := f.Stat()
 	if err != nil {
 		return 0, err
@@ -133,7 +135,7 @@ type fuzzyReader interface {
 	Seek(offset int64, whence int) (int64, error)
 }
 
-func (sdeep *SSDEEP) process(r fuzzyReader) {
+func (sdeep *SSDEEP) process(r *bufio.Reader) {
 	sdeep.newRollingState()
 	b, err := r.ReadByte()
 	for err == nil {
@@ -146,27 +148,56 @@ func (sdeep *SSDEEP) process(r fuzzyReader) {
 }
 
 // FuzzyReader hash of a provided reader
-func (sdeep *SSDEEP) FuzzyReader(r fuzzyReader, fileLocation string) (*FuzzyHash, error) {
+func (sdeep *SSDEEP) FuzzyReader(f fuzzyReader, fileLocation string) (*FuzzyHash, error) {
+	if sdeep.blockSize == 0 {
+		return nil, errors.New("Invalid Block Size, run GetBlockSize()")
+	}
+	for {
+		f.Seek(0, 0)
+		r := bufio.NewReader(f)
+		sdeep.process(r)
+		if sdeep.blockSize < blockMin {
+			return nil, errors.New("Unable to establish a sufficient block size")
+		}
+		if len(sdeep.hashString1) < spamSumLength/2 {
+			sdeep.blockSize = sdeep.blockSize / 2
+		} else {
+			break
+		}
+	}
+	return &FuzzyHash{
+		blockSize:    sdeep.blockSize,
+		hashString1:  sdeep.hashString1,
+		hashString2:  sdeep.hashString2,
+		fileLocation: fileLocation,
+	}, nil
+}
+
+// FuzzyFile hash of a provided reader
+func (sdeep *SSDEEP) FuzzyFile(f *os.File, fileLocation string) (*FuzzyHash, error) {
 	// This is not optimal as you have to read the whole file into memory
 	if sdeep.blockSize == 0 {
-		buf := &bytes.Buffer{}
-		n, err := io.Copy(buf, r)
+		n, err := GetFileSize(f)
 		if err != nil {
 			return nil, err
 		}
 		if n < minFileSize {
 			return nil, errors.New("Did not process files large enough to produce meaningful results")
 		}
-		sdeep.getBlockSize(int(n))
+		sdeep.GetBlockSize(int(n))
 	}
-	sdeep.process(r)
-	for len(sdeep.hashString1) < spamSumLength/2 {
+	for {
+		f.Seek(0, 0)
+		r := bufio.NewReader(f)
+		sdeep.process(r)
 		if sdeep.blockSize < blockMin {
 			return nil, errors.New("Unable to establish a sufficient block size")
 		}
-		sdeep.blockSize = sdeep.blockSize / 2
-		r.Seek(0, 0)
-		sdeep.process(r)
+		if len(sdeep.hashString1) < spamSumLength/2 {
+			sdeep.blockSize = sdeep.blockSize / 2
+		} else {
+			break
+		}
 	}
 	return &FuzzyHash{
 		blockSize:    sdeep.blockSize,
@@ -182,7 +213,25 @@ func (sdeep *SSDEEP) FuzzyByte(blob []byte) (*FuzzyHash, error) {
 	if n < minFileSize {
 		return nil, errors.New("Did not process files large enough to produce meaningful results")
 	}
-	sdeep.getBlockSize(n)
-	r := bytes.NewReader(blob)
-	return sdeep.FuzzyReader(r, "")
+	sdeep.GetBlockSize(n)
+	for {
+		br := bytes.NewReader(blob)
+		br.Seek(0, 0)
+		r := bufio.NewReader(br)
+		sdeep.process(r)
+		if sdeep.blockSize < blockMin {
+			return nil, errors.New("Unable to establish a sufficient block size")
+		}
+		if len(sdeep.hashString1) < spamSumLength/2 {
+			sdeep.blockSize = sdeep.blockSize / 2
+		} else {
+			break
+		}
+	}
+	return &FuzzyHash{
+		blockSize:    sdeep.blockSize,
+		hashString1:  sdeep.hashString1,
+		hashString2:  sdeep.hashString2,
+		fileLocation: "",
+	}, nil
 }

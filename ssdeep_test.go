@@ -5,12 +5,8 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"log"
 	"math/rand"
 	"os"
-	"os/exec"
-	"strings"
 	"testing"
 )
 
@@ -30,94 +26,99 @@ func readFile(filePath string) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-var h1 = FuzzyHash{
-	blockSize:   192,
-	hashString1: "MUPMinqP6+wNQ7Q40L/iB3n2rIBrP0GZKF4jsef+0FVQLSwbLbj41iH8nFVYv980",
-	hashString2: "x0CllivQiFmt",
-}
-var h2 = FuzzyHash{
-	blockSize:   192,
-	hashString1: "JkjRcePWsNVQza3ntZStn5VfsoXMhRD9+xJMinqF6+wNQ7Q40L/i737rPVt",
-	hashString2: "JkjlQyIrx+kll2",
-}
-var h3 = FuzzyHash{
-	blockSize:   196608,
-	hashString1: "pDSC8olnoL1v/uawvbQD7XlZUFYzYyMb615NktYHF7dREN/JNnQrmhnUPI+/n2Yr",
-	hashString2: "5DHoJXv7XOq7Mb2TwYHXREN/3QrmktPd",
-}
-var h4 = FuzzyHash{
-	blockSize:   196608,
-	hashString1: "7DSC8olnoL1v/uawvbQD7XlZUFYzYyMb615NktYHF7dREN/JNnQrmhnUPI+/n2Y7",
-	hashString2: "3DHoJXv7XOq7Mb2TwYHXREN/3QrmktPt",
-}
-var h5 = FuzzyHash{
-	blockSize:   196608,
-	hashString1: "7DSC8olnoL1v/uawvbQD7XlZUFYzYyMb615NktYHF7dREN/JNnQrmhnUPI+/n2Y7",
-	hashString2: "",
+func concatCopyPreAllocate(slices [][]byte) []byte {
+	var totalLen int
+	for _, s := range slices {
+		totalLen += len(s)
+	}
+	tmp := make([]byte, totalLen)
+	var i int
+	for _, s := range slices {
+		i += copy(tmp[i:], s)
+	}
+	return tmp
 }
 
 func TestRollingHash(t *testing.T) {
-	sdeep := SSDEEP{
+	s := SSDEEP{
 		rollingState: rollingState{
 			window: make([]byte, rollingWindow),
 		},
 	}
-	if sdeep.rollHash(byte('A')) != 585 {
+	if s.rollHash(byte('A')) != 585 {
 		t.Error("Rolling hash not matching")
 	}
 }
 
 func TestCompareHashFile(t *testing.T) {
-	sdeep := NewSSDEEP()
-	b, err := readFile("/tmp/data")
+	s := NewSSDEEP()
+	b, err := readFile("LICENSE")
 	if err != nil {
 		t.Error(err)
 	}
-	libhash, err := sdeep.FuzzyByte(b)
+	b = concatCopyPreAllocate([][]byte{b, b})
+	libhash, err := s.FuzzyByte(b)
 	if err != nil {
 		t.Error(err)
 	}
-	out, err := exec.Command("ssdeep", "/tmp/data").Output()
-	if err != nil {
-		log.Fatal(err)
+	if libhash.String() != "96:PuNQzo6pYsJWsJ6NA5xpYTYqhuNQzo6pYsJWsJ6NA5xpYTYA:+QzrpYgWg6NQ7aYZQzrpYgWg6NQ7aYA" {
+		t.Errorf(
+			"Hash mismatch: %s vs %s", libhash.String(),
+			"96:PuNQzo6pYsJWsJ6NA5xpYTYqhuNQzo6pYsJWsJ6NA5xpYTYA:+QzrpYgWg6NQ7aYZQzrpYgWg6NQ7aYA",
+		)
 	}
-	hash2 := strings.Split(strings.Split(string(out[:]), "\n")[1], ",")[0]
-	if hash2 != libhash.String() {
-		t.Errorf("Hash mismatch: %s vs %s", hash2, libhash.String())
+}
+
+func TestFuzzyReaderError(t *testing.T) {
+	s := NewSSDEEP()
+	b, err := readFile("ssdeep.go")
+	if err != nil {
+		t.Error(err)
+	}
+	r := bytes.NewReader(b)
+	if _, err := s.FuzzyReader(r, "ssdeep.go"); err == nil {
+		t.Error("Expecting error for missing block size")
+	}
+}
+
+func TestFuzzyReader(t *testing.T) {
+	s := NewSSDEEP()
+	b, err := readFile("ssdeep.go")
+	if err != nil {
+		t.Error(err)
+	}
+	s.GetBlockSize(len(b))
+	r := bytes.NewReader(b)
+	if _, err := s.FuzzyReader(r, "ssdeep.go"); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestFuzzyFile(t *testing.T) {
+	s := NewSSDEEP()
+	f, err := os.Open("ssdeep.go")
+	if err != nil {
+		t.Error(err)
+	}
+	defer f.Close()
+	_, err = s.FuzzyFile(f, "ssdeep.go")
+	if err != nil {
+		t.Error(err)
 	}
 }
 
 func TestEmptyByte(t *testing.T) {
-	sdeep := NewSSDEEP()
-	_, err := sdeep.FuzzyByte([]byte{})
+	s := NewSSDEEP()
+	_, err := s.FuzzyByte([]byte{})
 	if err == nil {
 		t.Error("Expecting error for empty file")
 	}
 }
 
-func TestCompareHashBytes(t *testing.T) {
-	blob, err := ioutil.ReadFile("/tmp/data")
-	if err != nil {
-		t.Error(err)
-	}
-	sdeep := NewSSDEEP()
-	libhash, err := sdeep.FuzzyByte(blob)
-	if err != nil {
-		t.Error(err)
-	}
-	out, err := exec.Command("ssdeep", "/tmp/data").Output()
-	if err != nil {
-		t.Error(err)
-	}
-	if strings.Split(string(out[:]), "\n")[1] != libhash.String()+",\"/tmp/data\"" {
-		t.Error("Hash mismatch")
-	}
-}
-
 func BenchmarkRollingHash(b *testing.B) {
-	sdeep := NewSSDEEP()
+	s := NewSSDEEP()
 	for i := 0; i < b.N; i++ {
-		sdeep.rollHash(byte(i))
+		s.rollHash(byte(i))
 	}
 }
 
@@ -130,8 +131,8 @@ func BenchmarkSumHash(b *testing.B) {
 }
 
 func BenchmarkBlockSize(b *testing.B) {
-	sdeep := NewSSDEEP()
+	s := NewSSDEEP()
 	for i := 0; i < b.N; i++ {
-		sdeep.getBlockSize(207160)
+		s.GetBlockSize(207160)
 	}
 }
