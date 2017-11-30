@@ -1,5 +1,11 @@
 language: go
 
+go:
+ - 1.7
+ - 1.8
+ - 1.9
+
 before_install:
-  - sudo apt-get -qq update
-  - sudo apt-get install -y ssdeep
+  - go get github.com/mattn/goveralls
+script:
+  - $HOME/gopath/bin/goveralls -service=travis-ci
