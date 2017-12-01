@@ -89,8 +89,12 @@ func TestFuzzyReader(t *testing.T) {
 	}
 	s.GetBlockSize(len(b))
 	r := bytes.NewReader(b)
-	if _, err := s.FuzzyReader(r, "ssdeep.go"); err != nil {
+	h, err := s.FuzzyReader(r, "ssdeep.go")
+	if err != nil {
 		t.Error(err)
+	}
+	if r := h.String(); r == "" {
+		t.Error("No hash string returned")
 	}
 }
 
