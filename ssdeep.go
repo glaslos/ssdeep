@@ -28,8 +28,8 @@ type rollingState struct {
 	n      uint32
 }
 
-func (r rollingState) rollSum() uint32 {
-	return r.h1 + r.h2 + r.h3
+func (rs rollingState) rollSum() uint32 {
+	return rs.h1 + rs.h2 + rs.h3
 }
 
 // FuzzyHash struct for comparison
@@ -79,7 +79,7 @@ func sumHash(c byte, h uint32) uint32 {
 }
 
 // rollHash based on Adler checksum
-func (sdeep *SSDEEP) rollHash(c byte) uint32 {
+func (sdeep *SSDEEP) rollHash(c byte) {
 	rs := &sdeep.rollingState
 	rs.h2 -= rs.h1
 	rs.h2 += rollingWindow * uint32(c)
@@ -92,7 +92,6 @@ func (sdeep *SSDEEP) rollHash(c byte) uint32 {
 	}
 	rs.h3 = rs.h3 << 5
 	rs.h3 ^= uint32(c)
-	return rs.rollSum()
 }
 
 // GetBlockSize calculates the block size based on file size
@@ -116,7 +115,8 @@ func GetFileSize(f *os.File) (int, error) {
 func (sdeep *SSDEEP) processByte(b byte) {
 	sdeep.blockHash1 = sumHash(b, sdeep.blockHash1)
 	sdeep.blockHash2 = sumHash(b, sdeep.blockHash2)
-	rh := int(sdeep.rollHash(b))
+	sdeep.rollHash(b)
+	rh := int(sdeep.rollingState.rollSum())
 	if rh%sdeep.blockSize == (sdeep.blockSize - 1) {
 		if len(sdeep.hashString1) < spamSumLength-1 {
 			sdeep.hashString1 += string(b64[sdeep.blockHash1%64])

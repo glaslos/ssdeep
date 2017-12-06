@@ -45,7 +45,9 @@ func TestRollingHash(t *testing.T) {
 			window: make([]byte, rollingWindow),
 		},
 	}
-	if s.rollHash(byte('A')) != 585 {
+	s.rollHash(byte('A'))
+	rh := s.rollingState.rollSum()
+	if  rh != 585 {
 		t.Error("Rolling hash not matching")
 	}
 }
