@@ -14,7 +14,7 @@ const (
 	spamSumLength        = 64
 	minFileSize          = 4096
 	hashPrime     uint32 = 0x01000193
-	hashIinit     uint32 = 0x28021967
+	hashInit      uint32 = 0x28021967
 	b64String            = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 )
 
@@ -26,6 +26,10 @@ type rollingState struct {
 	h2     uint32
 	h3     uint32
 	n      uint32
+}
+
+func (r rollingState) rollSum() uint32 {
+	return r.h1 + r.h2 + r.h3
 }
 
 // FuzzyHash struct for comparison
@@ -56,8 +60,8 @@ type SSDEEP struct {
 // NewSSDEEP creates a new SSDEEP hash
 func NewSSDEEP() SSDEEP {
 	return SSDEEP{
-		blockHash1: hashIinit,
-		blockHash2: hashIinit,
+		blockHash1: hashInit,
+		blockHash2: hashInit,
 		rollingState: rollingState{
 			window: make([]byte, rollingWindow),
 		},
@@ -88,7 +92,7 @@ func (sdeep *SSDEEP) rollHash(c byte) uint32 {
 	}
 	rs.h3 = rs.h3 << 5
 	rs.h3 ^= uint32(c)
-	return rs.h1 + rs.h2 + rs.h3
+	return rs.rollSum()
 }
 
 // GetBlockSize calculates the block size based on file size
@@ -116,14 +120,12 @@ func (sdeep *SSDEEP) processByte(b byte) {
 	if rh%sdeep.blockSize == (sdeep.blockSize - 1) {
 		if len(sdeep.hashString1) < spamSumLength-1 {
 			sdeep.hashString1 += string(b64[sdeep.blockHash1%64])
-			sdeep.blockHash1 = hashIinit
-			sdeep.newRollingState()
+			sdeep.blockHash1 = hashInit
 		}
 		if rh%(sdeep.blockSize*2) == ((sdeep.blockSize * 2) - 1) {
 			if len(sdeep.hashString2) < spamSumLength/2-1 {
 				sdeep.hashString2 += string(b64[sdeep.blockHash2%64])
-				sdeep.blockHash2 = hashIinit
-				sdeep.newRollingState()
+				sdeep.blockHash2 = hashInit
 			}
 		}
 	}
@@ -142,9 +144,12 @@ func (sdeep *SSDEEP) process(r *bufio.Reader) {
 		sdeep.processByte(b)
 		b, err = r.ReadByte()
 	}
-	// Finalize the hash string with the remaining data
-	sdeep.hashString1 += string(b64[sdeep.blockHash1%64])
-	sdeep.hashString2 += string(b64[sdeep.blockHash2%64])
+	rh := sdeep.rollingState.rollSum()
+	if rh != 0 {
+		// Finalize the hash string with the remaining data
+		sdeep.hashString1 += string(b64[sdeep.blockHash1%64])
+		sdeep.hashString2 += string(b64[sdeep.blockHash2%64])
+	}
 }
 
 // FuzzyReader hash of a provided reader
@@ -161,6 +166,10 @@ func (sdeep *SSDEEP) FuzzyReader(f fuzzyReader, fileLocation string) (*FuzzyHash
 		}
 		if len(sdeep.hashString1) < spamSumLength/2 {
 			sdeep.blockSize = sdeep.blockSize / 2
+			sdeep.blockHash1 = hashInit
+			sdeep.blockHash2 = hashInit
+			sdeep.hashString1 = ""
+			sdeep.hashString2 = ""
 		} else {
 			break
 		}
@@ -195,6 +204,10 @@ func (sdeep *SSDEEP) FuzzyFile(f *os.File, fileLocation string) (*FuzzyHash, err
 		}
 		if len(sdeep.hashString1) < spamSumLength/2 {
 			sdeep.blockSize = sdeep.blockSize / 2
+			sdeep.blockHash1 = hashInit
+			sdeep.blockHash2 = hashInit
+			sdeep.hashString1 = ""
+			sdeep.hashString2 = ""
 		} else {
 			break
 		}

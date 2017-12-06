@@ -61,10 +61,10 @@ func TestCompareHashFile(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if libhash.String() != "96:PuNQzo6pYsJWsJ6NA5xpYTYqhuNQzo6pYsJWsJ6NA5xpYTYA:+QzrpYgWg6NQ7aYZQzrpYgWg6NQ7aYA" {
+	expectedResult := "96:PuNQHTo6pYrYJWrYJ6N3w53hpYTdhuNQHTo6pYrYJWrYJ6N3w53hpYTP:+QHTrpYrsWrs6N3g3LaGQHTrpYrsWrsa"
+	if libhash.String() != expectedResult {
 		t.Errorf(
-			"Hash mismatch: %s vs %s", libhash.String(),
-			"96:PuNQzo6pYsJWsJ6NA5xpYTYqhuNQzo6pYsJWsJ6NA5xpYTYA:+QzrpYgWg6NQ7aYZQzrpYgWg6NQ7aYA",
+			"Hash mismatch: %s vs %s", libhash.String(), expectedResult,
 		)
 	}
 }
@@ -127,7 +127,7 @@ func BenchmarkRollingHash(b *testing.B) {
 }
 
 func BenchmarkSumHash(b *testing.B) {
-	testHash := hashIinit
+	testHash := hashInit
 	data := []byte("Hereyougojustsomedatatomakeyouhappy")
 	for i := 0; i < b.N; i++ {
 		testHash = sumHash(data[rand.Intn(len(data))], testHash)
