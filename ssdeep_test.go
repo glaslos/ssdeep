@@ -47,7 +47,7 @@ func TestRollingHash(t *testing.T) {
 	}
 	s.rollHash(byte('A'))
 	rh := s.rollingState.rollSum()
-	if  rh != 585 {
+	if rh != 585 {
 		t.Error("Rolling hash not matching")
 	}
 }
@@ -140,5 +140,14 @@ func BenchmarkBlockSize(b *testing.B) {
 	s := NewSSDEEP()
 	for i := 0; i < b.N; i++ {
 		s.GetBlockSize(207160)
+	}
+}
+
+func BenchmarkProcessByte(b *testing.B) {
+	s := NewSSDEEP()
+	s.blockSize = 42
+	s.newRollingState()
+	for i := 0; i < b.N; i++ {
+		s.processByte(byte(i))
 	}
 }
