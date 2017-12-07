@@ -59,4 +59,5 @@ func main() {
 		score := ssdeep.Distance(h1, h2)
 		fmt.Println(score)
 	}
+	println(h1.String())
 }

@@ -116,7 +116,7 @@ func (sdeep *SSDEEP) processByte(b byte) {
 	sdeep.blockHash1 = sumHash(b, sdeep.blockHash1)
 	sdeep.blockHash2 = sumHash(b, sdeep.blockHash2)
 	sdeep.rollHash(b)
-	rh := int(sdeep.rollingState.rollSum())
+	rh := int(sdeep.rollingState.h1 + sdeep.rollingState.h2 + sdeep.rollingState.h3)
 	if rh%sdeep.blockSize == (sdeep.blockSize - 1) {
 		if len(sdeep.hashString1) < spamSumLength-1 {
 			sdeep.hashString1 += string(b64[sdeep.blockHash1%64])
