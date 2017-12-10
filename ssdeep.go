@@ -145,7 +145,7 @@ func (sdeep *SSDEEP) process(r *bufio.Reader) {
 		b, err = r.ReadByte()
 	}
 	rh := sdeep.rollingState.rollSum()
-	if rh != 0 {
+	if rh != 0 && len(sdeep.hashString1) < spamSumLength/2 {
 		// Finalize the hash string with the remaining data
 		sdeep.hashString1 += string(b64[sdeep.blockHash1%64])
 		sdeep.hashString2 += string(b64[sdeep.blockHash2%64])
