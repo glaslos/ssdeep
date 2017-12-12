@@ -1,8 +1,6 @@
 package ssdeep
 
 import (
-	"bytes"
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -10,13 +8,6 @@ import (
 	"os"
 	"testing"
 )
-
-func minInt(x int, y int) int {
-	if x < y {
-		return x
-	}
-	return y
-}
 
 func assertNoError(t *testing.T, err error) {
 	if err != nil {
@@ -37,24 +28,6 @@ func assertHashEqual(t *testing.T, expected, actual string) {
 	}
 }
 
-func createRandomBytes(size int) ([]byte, error) {
-	output := make([]byte, size, size)
-	br := bytes.NewBuffer(make([]byte, 0, size))
-	buffer := make([]byte, 8, 8)
-
-	for i := 0; i < size; i += 8 {
-		num := rand.Uint64()
-		binary.LittleEndian.PutUint64(buffer, num)
-		_, err := br.Write(buffer[0:minInt(8, size-i)])
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	br.Read(output)
-	return output, nil
-}
-
 func TestIntegrity(t *testing.T) {
 	rand.Seed(1)
 	resultsFile, err := ioutil.ReadFile("ssdeep_results.json")
@@ -70,7 +43,8 @@ func TestIntegrity(t *testing.T) {
 			if size == 4097 {
 				i--
 			}
-			blob, err := createRandomBytes(size)
+			blob := make([]byte, size, size)
+			rand.Read(blob)
 			assertNoError(t, err)
 			sdeep := NewSSDEEP()
 
