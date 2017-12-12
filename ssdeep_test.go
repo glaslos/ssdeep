@@ -104,7 +104,7 @@ func TestFuzzyFileOutputsTheRightResult(t *testing.T) {
 	hashResult, err := s.FuzzyFile(f, "ssdeep_results.json")
 	assertNoError(t, err)
 
-	expectedResult := "768:/wTtvWwupmB69QqBUkOWZl3VOR1HapiWyz:cIFQqBuWZlFOLakWyz,\"ssdeep_results.json\""
+	expectedResult := "1536:74peLhFipssVfuInITTTZzMoW0379xy3u:VVFosEfudTj579k3u,\"ssdeep_results.json\""
 	assertHashEqual(t, expectedResult, hashResult.String())
 
 }
