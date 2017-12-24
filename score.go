@@ -1,28 +1,66 @@
 package ssdeep
 
-import "math"
+import (
+	"math"
+	"strings"
+	"strconv"
+	"errors"
+)
 
-// Distance between two strings
-func Distance(hash1, hash2 *FuzzyHash) (score int) {
-	if hash1 == nil || hash2 == nil {
-		return 0
-	}
-	// We can only compare equal or *2 block sizes
-	if hash1.blockSize != hash2.blockSize && hash1.blockSize != hash2.blockSize*2 && hash2.blockSize != hash1.blockSize*2 {
+func Distance(hash1, hash2 string) (score int, err error) {
+	hash1BlockSize, hash1String1, hash1String2, err := splitSsdeep(hash1)
+	if err != nil {
 		return
 	}
-	if hash1.blockSize == hash2.blockSize && hash1.hashString1 == hash2.hashString1 {
-		return 100
+	hash2BlockSize, hash2String1, hash2String2, err := splitSsdeep(hash2)
+	if err != nil {
+		return
 	}
-	if hash1.blockSize == hash2.blockSize {
-		d1 := scoreDistance(hash1.hashString1, hash2.hashString1, hash1.blockSize)
-		d2 := scoreDistance(hash1.hashString2, hash2.hashString2, hash1.blockSize*2)
+
+	if hash1BlockSize == hash2BlockSize && hash1String1 == hash2String1 {
+		return 100, nil
+	}
+
+	// We can only compare equal or *2 block sizes
+	if hash1BlockSize != hash2BlockSize && hash1BlockSize != hash2BlockSize*2 && hash2BlockSize != hash1BlockSize*2 {
+		return
+	}
+	if hash1BlockSize == hash2BlockSize && hash1String1 == hash2String1 {
+		return
+	}
+
+	if hash1BlockSize == hash2BlockSize {
+		d1 := scoreDistance(hash1String1, hash2String1, hash1BlockSize)
+		d2 := scoreDistance(hash1String2, hash2String2, hash1BlockSize*2)
 		score = int(math.Max(float64(d1), float64(d2)))
-	} else if hash1.blockSize == hash2.blockSize*2 {
-		score = scoreDistance(hash1.hashString1, hash2.hashString2, hash1.blockSize)
+	} else if hash1BlockSize == hash2BlockSize*2 {
+		score = scoreDistance(hash1String1, hash2String2, hash1BlockSize)
 	} else {
-		score = scoreDistance(hash1.hashString2, hash2.hashString1, hash2.blockSize)
+		score = scoreDistance(hash1String2, hash2String1, hash2BlockSize)
 	}
+	return
+}
+
+func splitSsdeep(hash string) (blockSize int, hashString1, hashString2 string, err error) {
+	if hash == "" {
+		err = errors.New("empty string")
+		return
+	}
+
+	parts := strings.Split(hash, ":")
+	if len(parts) != 3 {
+		err = errors.New("invalid ssdeep format")
+		return
+	}
+
+	blockSize, err = strconv.Atoi(parts[0])
+	if err != nil {
+		err = errors.New("invalid ssdeep format")
+		return
+	}
+
+	hashString1 = parts[1]
+	hashString2 = parts[2]
 	return
 }
 
