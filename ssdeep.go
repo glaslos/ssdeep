@@ -162,6 +162,10 @@ func (state *ssdeepState) fuzzyReader(f fuzzyReader, n int) (string, error) {
 	return fmt.Sprintf("%d:%s:%s", state.blockSize, state.hashString1, state.hashString2), nil
 }
 
+// FuzzyFilename computes the fuzzy hash of a file.
+// FuzzyFilename will opens, reads, and hashes the contents of the file 'filename'.
+// It is the caller's responsibility to append the filename to the result after computation.
+// Returns an error when the file doesn't exist or ssdeep could not be computed on the file.
 func FuzzyFilename(filename string) (string, error) {
 	f, err := os.Open(filename)
 	if err != nil {
@@ -172,6 +176,12 @@ func FuzzyFilename(filename string) (string, error) {
 	return FuzzyFile(f)
 }
 
+// FuzzyFile computes the fuzzy hash of a file using os.File pointer.
+// FuzzyFile will computes the fuzzy hash of the contents of the open file, starting at the beginning of the file.
+// When finished, the file pointer is returned to its original position.
+// If an error occurs, the file pointer's value is undefined.
+// It is the callers's responsibility to append the filename to the result after computation.
+// Returns an error when ssdeep could not be computed on the file.
 func FuzzyFile(f *os.File) (string, error) {
 	currentPosition, err := f.Seek(0, io.SeekCurrent)
 	if err != nil {
@@ -194,6 +204,9 @@ func FuzzyFile(f *os.File) (string, error) {
 	return result, nil
 }
 
+// FuzzyBytes computes the fuzzy hash of a slice of byte.
+// It is the caller's responsibility to append the filename, if any, to result after computation.
+// Returns an error when ssdeep could not be computed on the buffer.
 func FuzzyBytes(buffer []byte) (string, error) {
 	state := newSsdeepState()
 	n := len(buffer)
@@ -239,6 +252,8 @@ func (d *digest) BlockSize() int {
 	return minFileSize
 }
 
+// New returns a new hash.Hash computing the ssdeep checksum.
+// If Sum fails to produce ssdeep checksum, it will return nil instead of byte slice
 func New() hash.Hash {
 	digest := new(digest)
 	digest.Reset()
