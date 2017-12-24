@@ -34,6 +34,13 @@ func assertHashEqual(t *testing.T, expected, actual string) {
 	}
 }
 
+func assertIntEqual(t *testing.T, expected, actual int) {
+	if expected != actual {
+		t.Fatalf("Int mismatch: %s (expected)\n"+
+			"           != %s (actual)", expected, actual)
+	}
+}
+
 func TestIntegrity(t *testing.T) {
 	rand.Seed(1)
 	resultsFile, err := ioutil.ReadFile("ssdeep_results.json")
@@ -97,7 +104,7 @@ func TestFuzzyBytesOutputsTheRightResult(t *testing.T) {
 	assertHashEqual(t, expectedResult, hashResult)
 }
 
-func TestFuzzyFileOutputsTheRightResul(t *testing.T) {
+func TestFuzzyFileOutputsTheRightResult(t *testing.T) {
 	f, err := os.Open("ssdeep_results.json")
 	assertNoError(t, err)
 	defer f.Close()
@@ -110,6 +117,15 @@ func TestFuzzyFileOutputsTheRightResul(t *testing.T) {
 
 }
 
+func TestFuzzyFileOutputsAnErrorForSmallFiles(t *testing.T) {
+	f, err := os.Open("LICENSE")
+	assertNoError(t, err)
+	defer f.Close()
+
+	_, err = FuzzyFile(f)
+	assertError(t, err)
+}
+
 func TestFuzzyFilenameOutputsTheRightResult(t *testing.T) {
 	hashResult, err := FuzzyFilename("ssdeep_results.json")
 	assertNoError(t, err)
@@ -117,6 +133,11 @@ func TestFuzzyFilenameOutputsTheRightResult(t *testing.T) {
 	expectedResult := "1536:74peLhFipssVfuInITTTZzMoW0379xy3u:VVFosEfudTj579k3u"
 	assertHashEqual(t, expectedResult, hashResult)
 
+}
+
+func TestFuzzyFilenameOutputsErrorWhenFileNotExists(t *testing.T) {
+	_, err := FuzzyFilename("foo.bar")
+	assertError(t, err)
 }
 
 func TestFuzzyBytesWithLenLessThanMinimumOutputsAnError(t *testing.T) {
@@ -143,6 +164,15 @@ func TestHashInterface(t *testing.T) {
 	assertNoError(t, err)
 	actualString := string(actual[:])
 	assertHashEqual(t, expected, actualString)
+	assertIntEqual(t, len(data), h.Size())
+	assertIntEqual(t, minFileSize, h.BlockSize())
+}
+
+func TestHashInterfaceFailsWhenInputNotBigEnough(t *testing.T) {
+	h := New()
+	h.Write(make([]byte, 100))
+	actual := h.Sum(nil)
+	assertIntEqual(t, 0, len(actual))
 }
 
 func BenchmarkRollingHash(b *testing.B) {

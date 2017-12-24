@@ -88,15 +88,6 @@ func (state *ssdeepState) getBlockSize(n int) {
 	state.blockSize = blockSize
 }
 
-// getFileSize returns the files size
-func getFileSize(f *os.File) (int, error) {
-	fi, err := f.Stat()
-	if err != nil {
-		return 0, err
-	}
-	return int(fi.Size()), nil
-}
-
 func (state *ssdeepState) processByte(b byte) {
 	state.blockHash1 = sumHash(b, state.blockHash1)
 	state.blockHash2 = sumHash(b, state.blockHash2)
@@ -190,10 +181,11 @@ func FuzzyFile(f *os.File) (string, error) {
 
 	f.Seek(0, io.SeekStart)
 	state := newSsdeepState()
-	n, err := getFileSize(f)
+	stat, err := f.Stat()
 	if err != nil {
 		return "", err
 	}
+	n := int(stat.Size())
 
 	result, err := state.fuzzyReader(f, n)
 	if err != nil {
