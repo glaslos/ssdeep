@@ -245,7 +245,9 @@ func (d *digest) BlockSize() int {
 }
 
 // New returns a new hash.Hash computing the ssdeep checksum.
-// If Sum fails to produce ssdeep checksum, it will return nil instead of byte slice
+// If Sum fails to produce ssdeep checksum, it will return nil instead of byte slice.
+// Note that the implementation uses a buffer that keeps all the bytes written with Write since ssdeep must have all
+// the input available in order to compute the hash.
 func New() hash.Hash {
 	digest := new(digest)
 	digest.Reset()

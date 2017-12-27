@@ -36,8 +36,8 @@ func assertHashEqual(t *testing.T, expected, actual string) {
 
 func assertIntEqual(t *testing.T, expected, actual int) {
 	if expected != actual {
-		t.Fatalf("Int mismatch: %s (expected)\n"+
-			"           != %s (actual)", expected, actual)
+		t.Fatalf("Int mismatch: %d (expected)\n"+
+			"           != %d (actual)", expected, actual)
 	}
 }
 

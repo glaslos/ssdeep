@@ -7,7 +7,7 @@ import (
 	"errors"
 )
 
-// Computes the match score between two fuzzy hash signatures.
+// Distance computes the match score between two fuzzy hash signatures.
 // Returns a value from zero to 100 indicating the match score of the two signatures.
 // A match score of zero indicates the signatures did not match.
 // Returns an error when one of the inputs are not valid signatures.
@@ -27,9 +27,6 @@ func Distance(hash1, hash2 string) (score int, err error) {
 
 	// We can only compare equal or *2 block sizes
 	if hash1BlockSize != hash2BlockSize && hash1BlockSize != hash2BlockSize*2 && hash2BlockSize != hash1BlockSize*2 {
-		return
-	}
-	if hash1BlockSize == hash2BlockSize && hash1String1 == hash2String1 {
 		return
 	}
 

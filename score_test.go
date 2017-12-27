@@ -10,36 +10,35 @@ var h3 = "196608:pDSC8olnoL1v/uawvbQD7XlZUFYzYyMb615NktYHF7dREN/JNnQrmhnUPI+/n2Y
 
 var h4 = "196608:7DSC8olnoL1v/uawvbQD7XlZUFYzYyMb615NktYHF7dREN/JNnQrmhnUPI+/n2Y7:3DHoJXv7XOq7Mb2TwYHXREN/3QrmktPt"
 
+func assertDistanceEqual(t *testing.T, expected, actual int) {
+	if expected != actual {
+		t.Fatalf("Distance mismatch: %s (expected)\n"+
+			"                != %s (actual)", expected, actual)
+	}
+}
+
 func TestHashDistanceSame(t *testing.T) {
 	d, err := Distance(h1, h1)
 	assertNoError(t, err)
-	if d != 100 {
-		t.Errorf("Invalid hash distance: %d", d)
-	}
+	assertDistanceEqual(t, 100, d)
 }
 
 func TestHashDistance1(t *testing.T) {
 	d, err := Distance(h1, h2)
 	assertNoError(t, err)
-	if d != 35 {
-		t.Errorf("Invalid hash distance: %d", d)
-	}
+	assertDistanceEqual(t, 35, d)
 }
 
 func TestHashDistance2(t *testing.T) {
 	d, err := Distance(h3, h4)
 	assertNoError(t, err)
-	if d != 97 {
-		t.Errorf("Invalid hash distance: %d", d)
-	}
+	assertDistanceEqual(t, 97, d)
 }
 
 func TestEmptyHash1(t *testing.T) {
 	d, err := Distance("", h2)
 	assertError(t, err)
-	if d != 0 {
-		t.Errorf("hash1 is nil: %d", d)
-	}
+	assertDistanceEqual(t, 0, d)
 }
 
 func TestEmptyHash2(t *testing.T) {
