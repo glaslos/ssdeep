@@ -9,12 +9,6 @@ import (
 	"testing"
 )
 
-func assertNotNil(t *testing.T, value interface{}) {
-	if value == nil {
-		t.Fatalf("Expected value not to be nil %v", value)
-	}
-}
-
 func assertNoError(t *testing.T, err error) {
 	if err != nil {
 		t.Fatalf("Received unexpected error %+v", err)
@@ -31,13 +25,6 @@ func assertHashEqual(t *testing.T, expected, actual string) {
 	if expected != actual {
 		t.Fatalf("Hash mismatch: %s (expected)\n"+
 			"            != %s (actual)", expected, actual)
-	}
-}
-
-func assertIntEqual(t *testing.T, expected, actual int) {
-	if expected != actual {
-		t.Fatalf("Int mismatch: %d (expected)\n"+
-			"           != %d (actual)", expected, actual)
 	}
 }
 
@@ -148,31 +135,6 @@ func TestFuzzyBytesWithLenLessThanMinimumOutputsAnError(t *testing.T) {
 func TestFuzzyBytesWithOutputsAnError(t *testing.T) {
 	_, err := FuzzyBytes(make([]byte, 4096, 4096))
 	assertError(t, err)
-}
-
-func TestHashInterface(t *testing.T) {
-	h := New()
-
-	rand.Seed(0)
-	data := make([]byte, 4097)
-	rand.Read(data)
-
-	h.Write(data)
-	actual := h.Sum(nil)
-	assertNotNil(t, actual)
-	expected, err := FuzzyBytes(data)
-	assertNoError(t, err)
-	actualString := string(actual[:])
-	assertHashEqual(t, expected, actualString)
-	assertIntEqual(t, len(data), h.Size())
-	assertIntEqual(t, minFileSize, h.BlockSize())
-}
-
-func TestHashInterfaceFailsWhenInputNotBigEnough(t *testing.T) {
-	h := New()
-	h.Write(make([]byte, 100))
-	actual := h.Sum(nil)
-	assertIntEqual(t, 0, len(actual))
 }
 
 func BenchmarkRollingHash(b *testing.B) {

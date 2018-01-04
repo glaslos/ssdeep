@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"hash"
 	"io"
 	"os"
 )
@@ -107,7 +106,9 @@ func (state *ssdeepState) processByte(b byte) {
 	}
 }
 
-type fuzzyReader interface {
+// Reader is the minimum interface that ssdeep needs in order to calculate the fuzzy hash.
+// Reader groups io.Seeker and io.Reader.
+type Reader interface {
 	io.Seeker
 	io.Reader
 }
@@ -121,18 +122,21 @@ func (state *ssdeepState) process(r *bufio.Reader) {
 	}
 }
 
-func (state *ssdeepState) fuzzyReader(f fuzzyReader, n int) (string, error) {
-	if n < minFileSize {
-		return "", errors.New("Did not process files large enough to produce meaningful results")
+// FuzzyReader computes the fuzzy hash of a Reader interface with a given input size.
+// It is the caller's responsibility to append the filename, if any, to result after computation.
+// Returns an error when ssdeep could not be computed on the Reader.
+func FuzzyReader(f Reader, size int) (string, error) {
+	if size < minFileSize {
+		return "", errors.New("did not process files large enough to produce meaningful results")
 	}
-
-	state.getBlockSize(n)
+	state := newSsdeepState()
+	state.getBlockSize(size)
 	for {
 		f.Seek(0, 0)
 		r := bufio.NewReader(f)
 		state.process(r)
 		if state.blockSize < blockMin {
-			return "", errors.New("Unable to establish a sufficient block size")
+			return "", errors.New("unable to establish a sufficient block size")
 		}
 		if len(state.hashString1) < spamSumLength/2 {
 			state.blockSize = state.blockSize / 2
@@ -180,14 +184,13 @@ func FuzzyFile(f *os.File) (string, error) {
 	}
 
 	f.Seek(0, io.SeekStart)
-	state := newSsdeepState()
 	stat, err := f.Stat()
 	if err != nil {
 		return "", err
 	}
 	n := int(stat.Size())
 
-	result, err := state.fuzzyReader(f, n)
+	result, err := FuzzyReader(f, n)
 	if err != nil {
 		return "", err
 	}
@@ -200,56 +203,13 @@ func FuzzyFile(f *os.File) (string, error) {
 // It is the caller's responsibility to append the filename, if any, to result after computation.
 // Returns an error when ssdeep could not be computed on the buffer.
 func FuzzyBytes(buffer []byte) (string, error) {
-	state := newSsdeepState()
 	n := len(buffer)
 	br := bytes.NewReader(buffer)
 
-	result, err := state.fuzzyReader(br, n)
+	result, err := FuzzyReader(br, n)
 	if err != nil {
 		return "", err
 	}
 
 	return result, nil
-}
-
-
-// Hash interface related struct and functions
-type digest struct {
-	buffer []byte
-}
-
-func (d *digest) Write(p []byte) (n int, err error) {
-	n = len(p)
-	d.buffer = append(d.buffer, p...)
-	return
-}
-
-func (d *digest) Sum(b []byte) []byte {
-	result, err := FuzzyBytes(d.buffer)
-	if err != nil {
-		return nil
-	}
-	return append(b, []byte(result)...)
-}
-
-func (d *digest) Reset() {
-	d.buffer = make([]byte, 0, minFileSize)
-}
-
-func (d *digest) Size() int {
-	return len(d.buffer)
-}
-
-func (d *digest) BlockSize() int {
-	return minFileSize
-}
-
-// New returns a new hash.Hash computing the ssdeep checksum.
-// If Sum fails to produce ssdeep checksum, it will return nil instead of byte slice.
-// Note that the implementation uses a buffer that keeps all the bytes written with Write since ssdeep must have all
-// the input available in order to compute the hash.
-func New() hash.Hash {
-	digest := new(digest)
-	digest.Reset()
-	return digest
 }

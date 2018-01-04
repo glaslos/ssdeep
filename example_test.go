@@ -8,16 +8,6 @@ import (
 	"log"
 )
 
-func ExampleNew() {
-	h := ssdeep.New()
-
-	// Create data larger than 4096 bytes
-	data := make([]byte, 4097)
-	rand.Read(data)
-
-	h.Write(data)
-	fmt.Printf("%s", h.Sum(nil))
-}
 
 func ExampleFuzzyFilename() {
 	f, err := os.Open("file.txt")
