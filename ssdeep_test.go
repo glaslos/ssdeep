@@ -46,11 +46,9 @@ func TestIntegrity(t *testing.T) {
 			blob := make([]byte, size, size)
 			rand.Read(blob)
 			assertNoError(t, err)
-			sdeep := NewSSDEEP()
-
-			result, err := sdeep.FuzzyByte(blob)
+			result, err := FuzzyBytes(blob)
 			assertNoError(t, err)
-			assertHashEqual(t, originalResults[fmt.Sprint(size)], result.String())
+			assertHashEqual(t, originalResults[fmt.Sprint(size)], result)
 		})
 	}
 }
@@ -69,7 +67,7 @@ func concatCopyPreAllocate(slices [][]byte) []byte {
 }
 
 func TestRollingHash(t *testing.T) {
-	s := SSDEEP{
+	s := ssdeepState{
 		rollingState: rollingState{
 			window: make([]byte, rollingWindow),
 		},
@@ -82,47 +80,65 @@ func TestRollingHash(t *testing.T) {
 }
 
 func TestFuzzyBytesOutputsTheRightResult(t *testing.T) {
-	s := NewSSDEEP()
-
 	b, err := ioutil.ReadFile("LICENSE")
 	assertNoError(t, err)
 
 	b = concatCopyPreAllocate([][]byte{b, b})
-	hashResult, err := s.FuzzyByte(b)
+	hashResult, err := FuzzyBytes(b)
 	assertNoError(t, err)
 
 	expectedResult := "96:PuNQHTo6pYrYJWrYJ6N3w53hpYTdhuNQHTo6pYrYJWrYJ6N3w53hpYTP:+QHTrpYrsWrs6N3g3LaGQHTrpYrsWrsa"
-	assertHashEqual(t, expectedResult, hashResult.String())
+	assertHashEqual(t, expectedResult, hashResult)
 }
 
 func TestFuzzyFileOutputsTheRightResult(t *testing.T) {
-	s := NewSSDEEP()
 	f, err := os.Open("ssdeep_results.json")
 	assertNoError(t, err)
 	defer f.Close()
 
-	hashResult, err := s.FuzzyFile(f, "ssdeep_results.json")
+	hashResult, err := FuzzyFile(f)
 	assertNoError(t, err)
 
-	expectedResult := "1536:74peLhFipssVfuInITTTZzMoW0379xy3u:VVFosEfudTj579k3u,\"ssdeep_results.json\""
-	assertHashEqual(t, expectedResult, hashResult.String())
+	expectedResult := "1536:74peLhFipssVfuInITTTZzMoW0379xy3u:VVFosEfudTj579k3u"
+	assertHashEqual(t, expectedResult, hashResult)
 
 }
 
+func TestFuzzyFileOutputsAnErrorForSmallFiles(t *testing.T) {
+	f, err := os.Open("LICENSE")
+	assertNoError(t, err)
+	defer f.Close()
+
+	_, err = FuzzyFile(f)
+	assertError(t, err)
+}
+
+func TestFuzzyFilenameOutputsTheRightResult(t *testing.T) {
+	hashResult, err := FuzzyFilename("ssdeep_results.json")
+	assertNoError(t, err)
+
+	expectedResult := "1536:74peLhFipssVfuInITTTZzMoW0379xy3u:VVFosEfudTj579k3u"
+	assertHashEqual(t, expectedResult, hashResult)
+
+}
+
+func TestFuzzyFilenameOutputsErrorWhenFileNotExists(t *testing.T) {
+	_, err := FuzzyFilename("foo.bar")
+	assertError(t, err)
+}
+
 func TestFuzzyBytesWithLenLessThanMinimumOutputsAnError(t *testing.T) {
-	s := NewSSDEEP()
-	_, err := s.FuzzyByte([]byte{})
+	_, err := FuzzyBytes([]byte{})
 	assertError(t, err)
 }
 
 func TestFuzzyBytesWithOutputsAnError(t *testing.T) {
-	s := NewSSDEEP()
-	_, err := s.FuzzyByte(make([]byte, 4096, 4096))
+	_, err := FuzzyBytes(make([]byte, 4096, 4096))
 	assertError(t, err)
 }
 
 func BenchmarkRollingHash(b *testing.B) {
-	s := NewSSDEEP()
+	s := newSsdeepState()
 	for i := 0; i < b.N; i++ {
 		s.rollHash(byte(i))
 	}
@@ -137,14 +153,14 @@ func BenchmarkSumHash(b *testing.B) {
 }
 
 func BenchmarkBlockSize(b *testing.B) {
-	s := NewSSDEEP()
+	s := newSsdeepState()
 	for i := 0; i < b.N; i++ {
-		s.GetBlockSize(207160)
+		s.getBlockSize(207160)
 	}
 }
 
 func BenchmarkProcessByte(b *testing.B) {
-	s := NewSSDEEP()
+	s := newSsdeepState()
 	s.blockSize = 42
 	s.newRollingState()
 	for i := 0; i < b.N; i++ {

@@ -1,62 +1,40 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"flag"
 	"fmt"
-	"io"
-	"os"
-
 	"github.com/glaslos/ssdeep"
+	"os"
 )
-
-func readFile(filePath string) ([]byte, error) {
-	f, err := os.Open(filePath)
-	defer f.Close()
-	if err != nil {
-		return nil, err
-	}
-	r := bufio.NewReader(f)
-	buf := &bytes.Buffer{}
-	_, err = io.Copy(buf, r)
-	if err != nil {
-		fmt.Println(err)
-		return nil, err
-	}
-	return buf.Bytes(), nil
-}
 
 func main() {
 	flag.Parse()
-	if len(flag.Args()) < 1 {
+	args := flag.Args()
+	if len(args) < 1 {
 		fmt.Println("Please provide a file path: ./ssdeep /tmp/file")
-		return
+		os.Exit(1)
 	}
-	sdeep := ssdeep.NewSSDEEP()
-	b, err := readFile(flag.Args()[0])
+
+	h1, err := ssdeep.FuzzyFilename(args[0])
 	if err != nil {
 		fmt.Println(err)
-		return
+		os.Exit(1)
 	}
-	h1, err := sdeep.FuzzyByte(b)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	if len(flag.Args()) == 2 {
-		sdeep := ssdeep.NewSSDEEP()
-		b, err := readFile(flag.Args()[1])
+
+	if len(args) == 2 {
+		h2, err := ssdeep.FuzzyFilename(args[1])
 		if err != nil {
 			fmt.Println(err)
-			return
+			os.Exit(1)
 		}
-		h2, err := sdeep.FuzzyByte(b)
-		if err != nil {
-			fmt.Println(err)
-			return
+
+		score, _ := ssdeep.Distance(h1, h2)
+		if score != 0 {
+			fmt.Printf("%s matches %s (%d)\n", args[0], args[1], score)
+		} else {
+			fmt.Println("The files doesn't match")
 		}
-		score := ssdeep.Distance(h1, h2)
-		fmt.Println(score)
+	} else {
+		fmt.Printf("%s,\"%s\"\n", h1, args[0])
 	}
 }
