@@ -12,8 +12,8 @@ var h4 = "196608:7DSC8olnoL1v/uawvbQD7XlZUFYzYyMb615NktYHF7dREN/JNnQrmhnUPI+/n2Y
 
 func assertDistanceEqual(t *testing.T, expected, actual int) {
 	if expected != actual {
-		t.Fatalf("Distance mismatch: %s (expected)\n"+
-			"                != %s (actual)", expected, actual)
+		t.Fatalf("Distance mismatch: %d (expected)\n"+
+			"                != %d (actual)", expected, actual)
 	}
 }
 
