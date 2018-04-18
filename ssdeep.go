@@ -29,7 +29,7 @@ type rollingState struct {
 	n      uint32
 }
 
-func (rs rollingState) rollSum() uint32 {
+func (rs *rollingState) rollSum() uint32 {
 	return rs.h1 + rs.h2 + rs.h3
 }
 
