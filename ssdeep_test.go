@@ -155,7 +155,7 @@ func BenchmarkSumHash(b *testing.B) {
 func BenchmarkBlockSize(b *testing.B) {
 	s := newSsdeepState()
 	for i := 0; i < b.N; i++ {
-		s.getBlockSize(207160)
+		s.setBlockSize(207160)
 	}
 }
 
