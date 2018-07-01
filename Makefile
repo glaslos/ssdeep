@@ -1,7 +1,7 @@
-VERSION := v0.1.0
+VERSION := v0.2.0
 NAME := ssdeep
 BUILDSTRING := $(shell git log --pretty=format:'%h' -n 1)
-VERSIONSTRING := $(NAME) version $(VERSION)+$(BUILDSTRING)
+VERSIONSTRING := $(VERSION)+$(BUILDSTRING)
 BUILDDATE := $(shell date -u -Iseconds)
 OUTPUT = dist/$(NAME)
 LDFLAGS := "-X \"main.VERSION=$(VERSIONSTRING)\" -X \"main.BUILDDATE=$(BUILDDATE)\""
@@ -10,9 +10,9 @@ default: build
 
 build: $(OUTPUT)
 
-$(OUTPUT): app/ssdeep.go ssdeep.go score.go
+$(OUTPUT): app/main.go ssdeep.go score.go
 	@mkdir -p dist/
-	go build -o $(OUTPUT) -ldflags=$(LDFLAGS) app/ssdeep.go
+	go build -o $(OUTPUT) -ldflags=$(LDFLAGS) app/main.go
 
 .PHONY: clean
 clean:

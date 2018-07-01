@@ -19,7 +19,11 @@ const (
 	b64String            = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 )
 
-var b64 = []byte(b64String)
+var (
+	b64 = []byte(b64String)
+	// Force calculates the hash on invalid input
+	Force = false
+)
 
 type rollingState struct {
 	window []byte
@@ -79,7 +83,7 @@ func (state *ssdeepState) rollHash(c byte) {
 }
 
 // getBlockSize calculates the block size based on file size
-func (state *ssdeepState) getBlockSize(n int) {
+func (state *ssdeepState) setBlockSize(n int) {
 	blockSize := blockMin
 	for blockSize*spamSumLength < n {
 		blockSize = blockSize * 2
@@ -133,18 +137,26 @@ func (state *ssdeepState) process(r *bufio.Reader) {
 // FuzzyReader computes the fuzzy hash of a Reader interface with a given input size.
 // It is the caller's responsibility to append the filename, if any, to result after computation.
 // Returns an error when ssdeep could not be computed on the Reader.
-func FuzzyReader(f Reader, size int) (string, error) {
-	if size < minFileSize {
-		return "", ErrFileTooSmall
+func FuzzyReader(f Reader, fileSize int) (out string, err error) {
+	if fileSize < minFileSize {
+		err = ErrFileTooSmall
+		if !Force {
+			return
+		}
 	}
 	state := newSsdeepState()
-	state.getBlockSize(size)
+	state.setBlockSize(fileSize)
 	for {
-		f.Seek(0, 0)
+		if _, seekErr := f.Seek(0, 0); seekErr != nil {
+			return "", seekErr
+		}
 		r := bufio.NewReader(f)
 		state.process(r)
 		if state.blockSize < blockMin {
-			return "", ErrBlockSizeTooSmall
+			err = ErrBlockSizeTooSmall
+			if !Force {
+				return
+			}
 		}
 		if len(state.hashString1) < spamSumLength/2 {
 			state.blockSize = state.blockSize / 2
@@ -162,7 +174,7 @@ func FuzzyReader(f Reader, size int) (string, error) {
 			break
 		}
 	}
-	return fmt.Sprintf("%d:%s:%s", state.blockSize, state.hashString1, state.hashString2), nil
+	return fmt.Sprintf("%d:%s:%s", state.blockSize, state.hashString1, state.hashString2), err
 }
 
 // FuzzyFilename computes the fuzzy hash of a file.
@@ -185,26 +197,24 @@ func FuzzyFilename(filename string) (string, error) {
 // If an error occurs, the file pointer's value is undefined.
 // It is the callers's responsibility to append the filename to the result after computation.
 // Returns an error when ssdeep could not be computed on the file.
-func FuzzyFile(f *os.File) (string, error) {
+func FuzzyFile(f *os.File) (out string, err error) {
 	currentPosition, err := f.Seek(0, io.SeekCurrent)
 	if err != nil {
-		return "", err
+		return
 	}
-
-	f.Seek(0, io.SeekStart)
+	if _, err = f.Seek(0, io.SeekStart); err != nil {
+		return
+	}
 	stat, err := f.Stat()
 	if err != nil {
-		return "", err
+		return
 	}
-	n := int(stat.Size())
-
-	result, err := FuzzyReader(f, n)
+	out, err = FuzzyReader(f, int(stat.Size()))
 	if err != nil {
-		return "", err
+		return
 	}
-
-	f.Seek(currentPosition, io.SeekStart)
-	return result, nil
+	_, err = f.Seek(currentPosition, io.SeekStart)
+	return
 }
 
 // FuzzyBytes computes the fuzzy hash of a slice of byte.
