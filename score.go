@@ -1,10 +1,18 @@
 package ssdeep
 
 import (
-	"math"
-	"strings"
-	"strconv"
 	"errors"
+	"math"
+	"strconv"
+	"strings"
+)
+
+var (
+	// ErrEmptyHash is returned when no hash string is provided for scoring.
+	ErrEmptyHash = errors.New("empty string")
+
+	// ErrInvalidFormat is returned when a hash string is malformed.
+	ErrInvalidFormat = errors.New("invalid ssdeep format")
 )
 
 // Distance computes the match score between two fuzzy hash signatures.
@@ -44,19 +52,19 @@ func Distance(hash1, hash2 string) (score int, err error) {
 
 func splitSsdeep(hash string) (blockSize int, hashString1, hashString2 string, err error) {
 	if hash == "" {
-		err = errors.New("empty string")
+		err = ErrEmptyHash
 		return
 	}
 
 	parts := strings.Split(hash, ":")
 	if len(parts) != 3 {
-		err = errors.New("invalid ssdeep format")
+		err = ErrInvalidFormat
 		return
 	}
 
 	blockSize, err = strconv.Atoi(parts[0])
 	if err != nil {
-		err = errors.New("invalid ssdeep format")
+		err = ErrInvalidFormat
 		return
 	}
 

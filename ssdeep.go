@@ -9,6 +9,14 @@ import (
 	"os"
 )
 
+var (
+	// ErrFileTooSmall is returned when a file contains too few bytes.
+	ErrFileTooSmall = errors.New("did not process files large enough to produce meaningful results")
+
+	// ErrBlockSizeTooSmall is returned when a file can't produce a large enough block size.
+	ErrBlockSizeTooSmall = errors.New("unable to establish a sufficient block size")
+)
+
 const (
 	rollingWindow uint32 = 7
 	blockMin             = 3
@@ -131,7 +139,7 @@ func (state *ssdeepState) process(r *bufio.Reader) {
 // Returns an error when ssdeep could not be computed on the Reader.
 func FuzzyReader(f Reader, fileSize int) (out string, err error) {
 	if fileSize < minFileSize {
-		err = errors.New("did not process files large enough to produce meaningful results")
+		err = ErrFileTooSmall
 		if !Force {
 			return
 		}
@@ -145,7 +153,7 @@ func FuzzyReader(f Reader, fileSize int) (out string, err error) {
 		r := bufio.NewReader(f)
 		state.process(r)
 		if state.blockSize < blockMin {
-			err = errors.New("unable to establish a sufficient block size")
+			err = ErrBlockSizeTooSmall
 			if !Force {
 				return
 			}
