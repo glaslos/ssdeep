@@ -25,7 +25,12 @@ tag:
 
 .PHONY: build_release
 build_release: clean
-	cd app; gox -arch="amd64" -os="windows darwin linux" -output="../dist/$(NAME)-{{.Arch}}-{{.OS}}" -ldflags=$(LDFLAGS)
+	cd app; gox -arch="amd64" -os="windows darwin" -output="../dist/$(NAME)-{{.Arch}}-{{.OS}}" -ldflags=$(LDFLAGS)
+	cd app; gox -arch="amd64 arm" -os="linux" -output="../dist/$(NAME)-{{.Arch}}-{{.OS}}" -ldflags=$(LDFLAGS)
+
+.PHONY: upx
+upx:
+	cd dist; find . -type f -exec upx "{}" \;
 
 .PHONY: bench
 bench:
