@@ -3,6 +3,7 @@ package ssdeep
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -135,6 +136,30 @@ func TestFuzzyBytesWithLenLessThanMinimumOutputsAnError(t *testing.T) {
 func TestFuzzyBytesWithOutputsAnError(t *testing.T) {
 	_, err := FuzzyBytes(make([]byte, 4096, 4096))
 	assertError(t, err)
+}
+
+func TestFuzzyHashInterfaceOutputsTheRightResult(t *testing.T) {
+	f, err := os.Open("ssdeep_results.json")
+	assertNoError(t, err)
+	defer f.Close()
+
+	expectedResult, err := FuzzyFile(f)
+	assertNoError(t, err)
+
+	f.Seek(0, 0)
+
+	finfo, err := f.Stat()
+	assertNoError(t, err)
+
+	hashobj, err := NewFuzzyWriter(int(finfo.Size()))
+	assertNoError(t, err)
+	_, err = io.Copy(hashobj, f)
+	assertNoError(t, err)
+
+	hashResult, err := hashobj.StringSum()
+
+	assertHashEqual(t, expectedResult, hashResult)
+
 }
 
 func BenchmarkRollingHash(b *testing.B) {

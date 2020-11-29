@@ -135,6 +135,16 @@ func (state *ssdeepState) process(r *bufio.Reader) {
 	}
 }
 
+// some sort of finalization thing
+func (state *ssdeepState) finalize() {
+	rh := state.rollingState.rollSum()
+	if rh != 0 {
+		// Finalize the hash string with the remaining data
+		state.hashString1 += string(b64[state.blockHash1%64])
+		state.hashString2 += string(b64[state.blockHash2%64])
+	}
+}
+
 // FuzzyReader computes the fuzzy hash of a Reader interface with a given input size.
 // It is the caller's responsibility to append the filename, if any, to result after computation.
 // Returns an error when ssdeep could not be computed on the Reader.
@@ -171,12 +181,7 @@ func FuzzyReader(f Reader, fileSize int) (string, error) {
 			state.hashString1 = ""
 			state.hashString2 = ""
 		} else {
-			rh := state.rollingState.rollSum()
-			if rh != 0 {
-				// Finalize the hash string with the remaining data
-				state.hashString1 += string(b64[state.blockHash1%64])
-				state.hashString2 += string(b64[state.blockHash2%64])
-			}
+			state.finalize()
 			break
 		}
 	}
@@ -236,4 +241,31 @@ func FuzzyBytes(buffer []byte) (string, error) {
 	}
 
 	return result, nil
+}
+
+type FuzzyWriter struct {
+	state ssdeepState
+}
+
+func NewFuzzyWriter(fileSize int) (*FuzzyWriter, error) {
+	if fileSize < minFileSize {
+		if !Force {
+			return nil, ErrFileTooSmall
+		}
+	}
+	state := newSsdeepState()
+	state.setBlockSize(fileSize)
+	return &FuzzyWriter{ state: state }, nil
+}
+
+func (fw *FuzzyWriter) Write(p []byte) (int, error) {
+	for _, b := range p {
+		fw.state.processByte(b)
+	}
+	return len(p), nil
+}
+
+func (fw *FuzzyWriter) StringSum() (string, error) {
+	fw.state.finalize()
+	return fmt.Sprintf("%d:%s:%s", fw.state.blockSize, fw.state.hashString1, fw.state.hashString2), nil
 }
