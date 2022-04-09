@@ -7,3 +7,9 @@
 Golang implementation based on the [paper](https://github.com/emintham/Papers/blob/6053eb1a180a511c127d12f7760c20202b1fcd3b/Kornblum-%20Identifying%20almost%20identical%20files%20using%20context%20triggered%20piecewise%20hashing.pdf) and [implementation](https://sourceforge.net/p/ssdeep/code/HEAD/tree/trunk/fuzzy.c) by Jesse Kornblum.
 
 See the [example](/app/ssdeep.go) in the app directory for the usage.
+
+## Tools
+
+For CPU profiling: `apt install graphviz`
+
+For banchmark comparison `go install golang.org/x/perf/cmd/benchstat@latest`

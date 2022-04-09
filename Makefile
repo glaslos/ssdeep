@@ -56,7 +56,7 @@ benchcmp:
 	git stash save "stashing for benchcmp"
 	@go test -test.benchmem=true -run=NONE -bench=. ./... > bench_head.test
 	git stash pop
-	benchcmp bench_head.test bench_current.test
+	benchstat bench_head.test bench_current.test
 
 sample:
 	if [ ! -f /tmp/data ]; then \

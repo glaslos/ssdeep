@@ -126,13 +126,14 @@ type Reader interface {
 	io.Reader
 }
 
-func (state *ssdeepState) process(r *bufio.Reader) {
+func (state *ssdeepState) process(r *bufio.Reader) error {
 	state.newRollingState()
 	b, err := r.ReadByte()
 	for err == nil {
 		state.processByte(b)
 		b, err = r.ReadByte()
 	}
+	return err
 }
 
 // FuzzyReader computes the fuzzy hash of a Reader interface with a given input size.
@@ -162,7 +163,9 @@ func FuzzyReader(f Reader, fileSize int) (string, error) {
 		}
 
 		r := bufio.NewReader(f)
-		state.process(r)
+		if err := state.process(r); err != nil {
+			return "", err
+		}
 
 		if len(state.hashString1) < spamSumLength/2 {
 			state.blockSize = state.blockSize / 2

@@ -27,3 +27,4 @@ ssdeep
 dist/
 
 .idea
+pprof/
