@@ -1,6 +1,10 @@
 package ssdeep
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
 
 var h1 = "192:MUPMinqP6+wNQ7Q40L/iB3n2rIBrP0GZKF4jsef+0FVQLSwbLbj41iH8nFVYv980:x0CllivQiFmt"
 
@@ -19,31 +23,31 @@ func assertDistanceEqual(t *testing.T, expected, actual int) {
 
 func TestHashDistanceSame(t *testing.T) {
 	d, err := Distance(h1, h1)
-	assertNoError(t, err)
+	assert.NoError(t, err)
 	assertDistanceEqual(t, 100, d)
 }
 
 func TestHashDistance1(t *testing.T) {
 	d, err := Distance(h1, h2)
-	assertNoError(t, err)
+	assert.NoError(t, err)
 	assertDistanceEqual(t, 35, d)
 }
 
 func TestHashDistance2(t *testing.T) {
 	d, err := Distance(h3, h4)
-	assertNoError(t, err)
+	assert.NoError(t, err)
 	assertDistanceEqual(t, 97, d)
 }
 
 func TestEmptyHash1(t *testing.T) {
 	d, err := Distance("", h2)
-	assertError(t, err)
+	assert.Error(t, err)
 	assertDistanceEqual(t, 0, d)
 }
 
 func TestEmptyHash2(t *testing.T) {
 	d, err := Distance(h1, "")
-	assertError(t, err)
+	assert.Error(t, err)
 	if d != 0 {
 		t.Errorf("hash2 is nil: %d", d)
 	}
@@ -51,7 +55,7 @@ func TestEmptyHash2(t *testing.T) {
 
 func TestInvalidHash1(t *testing.T) {
 	d, err := Distance("192:asdasd", h1)
-	assertError(t, err)
+	assert.Error(t, err)
 
 	if d != 0 {
 		t.Errorf("hash1 and hash2 are nil: %d", d)
@@ -60,7 +64,7 @@ func TestInvalidHash1(t *testing.T) {
 
 func TestInvalidHash2(t *testing.T) {
 	d, err := Distance(h1, "asd:asdasd:aaaa")
-	assertError(t, err)
+	assert.Error(t, err)
 	if d != 0 {
 		t.Errorf("hash1 and hash2 are nil: %d", d)
 	}
