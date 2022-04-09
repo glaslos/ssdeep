@@ -15,7 +15,7 @@ var (
 	// ErrBlockSizeTooSmall is returned when a file can't produce a large enough block size.
 	ErrBlockSizeTooSmall = errors.New("unable to establish a sufficient block size")
 	// ErrZeroBlockSize is returned if we fail to establish a non-zero block size.
-	ErrZeroBlockSize = errors.New("Reached zero block size, unable to compute hash")
+	ErrZeroBlockSize = errors.New("reached zero block size, unable to compute hash")
 )
 
 const (
