@@ -7,19 +7,9 @@ import (
 	"math/rand"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
-
-func assertNoError(t *testing.T, err error) {
-	if err != nil {
-		t.Fatalf("Received unexpected error %+v", err)
-	}
-}
-
-func assertError(t *testing.T, err error) {
-	if err == nil {
-		t.Fatal("An error is expected but got nil.")
-	}
-}
 
 func assertHashEqual(t *testing.T, expected, actual string) {
 	if expected != actual {
@@ -31,11 +21,11 @@ func assertHashEqual(t *testing.T, expected, actual string) {
 func TestIntegrity(t *testing.T) {
 	rand.Seed(1)
 	resultsFile, err := ioutil.ReadFile("ssdeep_results.json")
-	assertNoError(t, err)
+	assert.NoError(t, err)
 
 	originalResults := make(map[string]string)
 	err = json.Unmarshal(resultsFile, &originalResults)
-	assertNoError(t, err)
+	assert.NoError(t, err)
 
 	for i := 4097; i < 10*1024*1024; i += 4096 * 10 {
 		t.Run(fmt.Sprintf("Bytes in size of %d", i), func(t *testing.T) {
@@ -44,10 +34,10 @@ func TestIntegrity(t *testing.T) {
 				i--
 			}
 			blob := make([]byte, size)
-			rand.Read(blob)
-			assertNoError(t, err)
+			_, err = rand.Read(blob)
+			assert.NoError(t, err)
 			result, err := FuzzyBytes(blob)
-			assertNoError(t, err)
+			assert.NoError(t, err)
 			assertHashEqual(t, originalResults[fmt.Sprint(size)], result)
 		})
 	}
@@ -81,11 +71,11 @@ func TestRollingHash(t *testing.T) {
 
 func TestFuzzyBytesOutputsTheRightResult(t *testing.T) {
 	b, err := ioutil.ReadFile("LICENSE")
-	assertNoError(t, err)
+	assert.NoError(t, err)
 
 	b = concatCopyPreAllocate([][]byte{b, b})
 	hashResult, err := FuzzyBytes(b)
-	assertNoError(t, err)
+	assert.NoError(t, err)
 
 	expectedResult := "96:PuNQHTo6pYrYJWrYJ6N3w53hpYTdhuNQHTo6pYrYJWrYJ6N3w53hpYTP:+QHTrpYrsWrs6N3g3LaGQHTrpYrsWrsa"
 	assertHashEqual(t, expectedResult, hashResult)
@@ -93,11 +83,11 @@ func TestFuzzyBytesOutputsTheRightResult(t *testing.T) {
 
 func TestFuzzyFileOutputsTheRightResult(t *testing.T) {
 	f, err := os.Open("ssdeep_results.json")
-	assertNoError(t, err)
+	assert.NoError(t, err)
 	defer f.Close()
 
 	hashResult, err := FuzzyFile(f)
-	assertNoError(t, err)
+	assert.NoError(t, err)
 
 	expectedResult := "1536:74peLhFipssVfuInITTTZzMoW0379xy3u:VVFosEfudTj579k3u"
 	assertHashEqual(t, expectedResult, hashResult)
@@ -106,35 +96,34 @@ func TestFuzzyFileOutputsTheRightResult(t *testing.T) {
 
 func TestFuzzyFileOutputsAnErrorForSmallFiles(t *testing.T) {
 	f, err := os.Open("LICENSE")
-	assertNoError(t, err)
+	assert.NoError(t, err)
 	defer f.Close()
 
 	_, err = FuzzyFile(f)
-	assertError(t, err)
+	assert.Error(t, err)
 }
 
 func TestFuzzyFilenameOutputsTheRightResult(t *testing.T) {
 	hashResult, err := FuzzyFilename("ssdeep_results.json")
-	assertNoError(t, err)
+	assert.NoError(t, err)
 
 	expectedResult := "1536:74peLhFipssVfuInITTTZzMoW0379xy3u:VVFosEfudTj579k3u"
 	assertHashEqual(t, expectedResult, hashResult)
-
 }
 
 func TestFuzzyFilenameOutputsErrorWhenFileNotExists(t *testing.T) {
 	_, err := FuzzyFilename("foo.bar")
-	assertError(t, err)
+	assert.Error(t, err)
 }
 
 func TestFuzzyBytesWithLenLessThanMinimumOutputsAnError(t *testing.T) {
 	_, err := FuzzyBytes([]byte{})
-	assertError(t, err)
+	assert.Error(t, err)
 }
 
 func TestFuzzyBytesWithOutputsAnError(t *testing.T) {
 	_, err := FuzzyBytes(make([]byte, 4096))
-	assertError(t, err)
+	assert.Error(t, err)
 }
 
 func BenchmarkRollingHash(b *testing.B) {
