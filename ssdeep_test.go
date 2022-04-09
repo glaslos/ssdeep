@@ -43,7 +43,7 @@ func TestIntegrity(t *testing.T) {
 			if size == 4097 {
 				i--
 			}
-			blob := make([]byte, size, size)
+			blob := make([]byte, size)
 			rand.Read(blob)
 			assertNoError(t, err)
 			result, err := FuzzyBytes(blob)
@@ -133,7 +133,7 @@ func TestFuzzyBytesWithLenLessThanMinimumOutputsAnError(t *testing.T) {
 }
 
 func TestFuzzyBytesWithOutputsAnError(t *testing.T) {
-	_, err := FuzzyBytes(make([]byte, 4096, 4096))
+	_, err := FuzzyBytes(make([]byte, 4096))
 	assertError(t, err)
 }
 
