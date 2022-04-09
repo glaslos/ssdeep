@@ -1,10 +1,9 @@
-[![Build Status](https://travis-ci.org/glaslos/ssdeep.svg?branch=master)](https://travis-ci.org/glaslos/ssdeep)
-[![Coverage Status](https://coveralls.io/repos/github/glaslos/ssdeep/badge.svg?branch=master)](https://coveralls.io/github/glaslos/ssdeep?branch=master)
+![example workflow](https://github.com/glaslos/ssdeep/actions/workflows/go.yml/badge.svg)
 [![Go Report Card](https://goreportcard.com/badge/github.com/glaslos/ssdeep)](https://goreportcard.com/report/github.com/glaslos/ssdeep)
-[![GoDoc](https://godoc.org/github.com/glaslos/ssdeep?status.svg)](https://godoc.org/github.com/glaslos/ssdeep)
+[![Go Reference](https://pkg.go.dev/badge/github.com/glaslos/ssdeep.svg)](https://pkg.go.dev/github.com/glaslos/ssdeep)
 
 # SSDEEP
 
-Golang implementation based on the [paper](https://dfrws.org/sites/default/files/session-files/paper-identifying_almost_identical_files_using_context_triggered_piecewise_hashing.pdf) and [implementation](https://sourceforge.net/p/ssdeep/code/HEAD/tree/trunk/fuzzy.c) by Jesse Kornblum.
+Golang implementation based on the [paper](https://github.com/emintham/Papers/blob/6053eb1a180a511c127d12f7760c20202b1fcd3b/Kornblum-%20Identifying%20almost%20identical%20files%20using%20context%20triggered%20piecewise%20hashing.pdf) and [implementation](https://sourceforge.net/p/ssdeep/code/HEAD/tree/trunk/fuzzy.c) by Jesse Kornblum.
 
 See the [example](/app/ssdeep.go) in the app directory for the usage.
