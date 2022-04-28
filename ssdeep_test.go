@@ -9,13 +9,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func assertHashEqual(t *testing.T, expected, actual string) {
-	if expected != actual {
-		t.Fatalf("Hash mismatch: %s (expected)\n"+
-			"            != %s (actual)", expected, actual)
-	}
+	require.Equal(t, expected, actual, "hash mismatch")
 }
 
 func TestIntegrity(t *testing.T) {
@@ -58,12 +56,12 @@ func concatCopyPreAllocate(slices [][]byte) []byte {
 
 func TestRollingHash(t *testing.T) {
 	s := ssdeepState{
-		rollingState: rollingState{
+		rState: rollingState{
 			window: make([]byte, rollingWindow),
 		},
 	}
 	s.rollHash(byte('A'))
-	rh := s.rollingState.rollSum()
+	rh := s.rState.rollSum()
 	if rh != 585 {
 		t.Fatal("Rolling hash not matching")
 	}

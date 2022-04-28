@@ -47,27 +47,29 @@ func (rs *rollingState) rollSum() uint32 {
 }
 
 type ssdeepState struct {
-	rollingState rollingState
-	blockSize    int
-	hashString1  string
-	hashString2  string
-	blockHash1   uint32
-	blockHash2   uint32
+	rState      rollingState
+	blockSize   int
+	hashString1 string
+	hashString2 string
+	blockHash1  uint32
+	blockHash2  uint32
+	lasthash    uint32
 }
 
 func newSsdeepState() ssdeepState {
 	return ssdeepState{
 		blockHash1: hashInit,
 		blockHash2: hashInit,
-		rollingState: rollingState{
+		rState: rollingState{
 			window: make([]byte, rollingWindow),
 		},
+		blockSize: blockMin,
 	}
 }
 
 func (state *ssdeepState) newRollingState() {
-	state.rollingState = rollingState{}
-	state.rollingState.window = make([]byte, rollingWindow)
+	state.rState = rollingState{}
+	state.rState.window = make([]byte, rollingWindow)
 }
 
 // sumHash based on FNV hash
@@ -77,7 +79,7 @@ func sumHash(c byte, h uint32) uint32 {
 
 // rollHash based on Adler checksum
 func (state *ssdeepState) rollHash(c byte) {
-	rs := &state.rollingState
+	rs := &state.rState
 	rs.h2 -= rs.h1
 	rs.h2 += rollingWindow * uint32(c)
 	rs.h1 += uint32(c)
@@ -93,18 +95,17 @@ func (state *ssdeepState) rollHash(c byte) {
 
 // getBlockSize calculates the block size based on file size
 func (state *ssdeepState) setBlockSize(n int) {
-	blockSize := blockMin
-	for blockSize*spamSumLength < n {
-		blockSize = blockSize * 2
+	for state.blockSize*spamSumLength < n {
+		state.blockSize = state.blockSize * 2
 	}
-	state.blockSize = blockSize
 }
 
 func (state *ssdeepState) processByte(b byte) {
+	state.rollHash(b)
 	state.blockHash1 = sumHash(b, state.blockHash1)
 	state.blockHash2 = sumHash(b, state.blockHash2)
-	state.rollHash(b)
-	rh := int(state.rollingState.rollSum())
+	state.lasthash = sumHash(b, state.lasthash)
+	rh := int(state.rState.rollSum())
 	if rh%state.blockSize == (state.blockSize - 1) {
 		if len(state.hashString1) < spamSumLength-1 {
 			state.hashString1 += string(b64[state.blockHash1%64])
@@ -177,11 +178,13 @@ func FuzzyReader(f Reader, fileSize int) (string, error) {
 			state.hashString1 = ""
 			state.hashString2 = ""
 		} else {
-			rh := state.rollingState.rollSum()
+			rh := state.rState.rollSum()
 			if rh != 0 {
 				// Finalize the hash string with the remaining data
 				state.hashString1 += string(b64[state.blockHash1%64])
 				state.hashString2 += string(b64[state.blockHash2%64])
+			} else {
+				state.hashString1 += string(b64[state.lasthash%64] - 1)
 			}
 			break
 		}
