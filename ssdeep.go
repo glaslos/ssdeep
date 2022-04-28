@@ -133,6 +133,9 @@ func (state *ssdeepState) process(r *bufio.Reader) error {
 		state.processByte(b)
 		b, err = r.ReadByte()
 	}
+	if err == io.EOF {
+		return nil
+	}
 	return err
 }
 
