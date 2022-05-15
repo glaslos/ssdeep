@@ -1,4 +1,4 @@
-VERSION := v0.3.1
+VERSION := v0.3.2
 NAME := ssdeep
 BUILDSTRING := $(shell git log --pretty=format:'%h' -n 1)
 VERSIONSTRING := $(VERSION)+$(BUILDSTRING)
