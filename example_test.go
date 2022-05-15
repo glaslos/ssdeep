@@ -1,6 +1,7 @@
 package ssdeep_test
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"math/rand"
@@ -9,7 +10,7 @@ import (
 	"github.com/glaslos/ssdeep"
 )
 
-func ExampleFuzzyFilename() {
+func ExampleFuzzyFile() {
 	f, err := os.Open("file.txt")
 	if err != nil {
 		log.Fatal(err)
@@ -20,7 +21,6 @@ func ExampleFuzzyFilename() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	fmt.Println(h)
 }
 
@@ -31,6 +31,23 @@ func ExampleFuzzyBytes() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	fmt.Println(h)
+}
 
+func ExampleFuzzyReader() {
+	buffer := make([]byte, 4097)
+	rand.Read(buffer)
+	h, err := ssdeep.FuzzyReader(bytes.NewReader(buffer), len(buffer))
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(h)
+}
+
+func ExampleFuzzyFilename() {
+	h, err := ssdeep.FuzzyFilename("file.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
 	fmt.Println(h)
 }

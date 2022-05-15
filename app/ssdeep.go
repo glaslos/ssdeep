@@ -1,12 +1,11 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 
 	"github.com/glaslos/ssdeep"
-	"github.com/spf13/pflag"
-	"github.com/spf13/viper"
 )
 
 var (
@@ -16,22 +15,25 @@ var (
 	BUILDDATE = ""
 )
 
+var (
+	forceHash   bool
+	showVersion bool
+)
+
 func main() {
 	fmt.Printf("ssdeep,%s--blocksize:hash:hash,filename\n", VERSION)
 
-	pflag.Bool("force", false, "Force hash on error or invalid input length")
-	pflag.Bool("version", false, "Print version")
-	pflag.Parse()
-	if err := viper.BindPFlags(pflag.CommandLine); err != nil {
-		panic(err)
-	}
-	if viper.GetBool("version") {
+	flag.BoolVar(&forceHash, "force", false, "Force hash on error or invalid input length")
+	flag.BoolVar(&showVersion, "version", false, "Print version")
+	flag.Parse()
+
+	if showVersion {
 		fmt.Printf("%s %s\n", VERSION, BUILDDATE)
 		return
 	}
-	ssdeep.Force = viper.GetBool("force")
+	ssdeep.Force = forceHash
 
-	args := pflag.Args()
+	args := flag.Args()
 	if len(args) < 1 {
 		fmt.Println("Please provide a file path: ./ssdeep /tmp/file")
 		os.Exit(1)
