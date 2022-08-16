@@ -47,12 +47,12 @@ func (rs *rollingState) rollSum() uint32 {
 }
 
 type ssdeepState struct {
-	rollingState rollingState
-	blockSize    int
-	hashString1  string
-	hashString2  string
-	blockHash1   uint32
-	blockHash2   uint32
+	rollingState   rollingState
+	blockSize      int
+	hashStringBuf1 bytes.Buffer
+	hashStringBuf2 bytes.Buffer
+	blockHash1     uint32
+	blockHash2     uint32
 }
 
 func newSsdeepState() ssdeepState {
@@ -106,13 +106,13 @@ func (state *ssdeepState) processByte(b byte) {
 	state.rollHash(b)
 	rh := int(state.rollingState.rollSum())
 	if rh%state.blockSize == (state.blockSize - 1) {
-		if len(state.hashString1) < spamSumLength-1 {
-			state.hashString1 += string(b64[state.blockHash1%64])
+		if state.hashStringBuf1.Len() < spamSumLength-1 {
+			state.hashStringBuf1.WriteByte(b64[state.blockHash1%64])
 			state.blockHash1 = hashInit
 		}
 		if rh%(state.blockSize*2) == ((state.blockSize * 2) - 1) {
-			if len(state.hashString2) < spamSumLength/2-1 {
-				state.hashString2 += string(b64[state.blockHash2%64])
+			if state.hashStringBuf2.Len() < spamSumLength/2-1 {
+				state.hashStringBuf2.WriteByte(b64[state.blockHash2%64])
 				state.blockHash2 = hashInit
 			}
 		}
@@ -170,23 +170,23 @@ func FuzzyReader(f Reader, fileSize int) (string, error) {
 			return "", err
 		}
 
-		if len(state.hashString1) < spamSumLength/2 {
-			state.blockSize = state.blockSize / 2
+		if state.hashStringBuf1.Len() < spamSumLength/2 {
+			state.blockSize = state.blockSize >> 1
 			state.blockHash1 = hashInit
 			state.blockHash2 = hashInit
-			state.hashString1 = ""
-			state.hashString2 = ""
+			state.hashStringBuf1.Reset()
+			state.hashStringBuf2.Reset()
 		} else {
 			rh := state.rollingState.rollSum()
 			if rh != 0 {
 				// Finalize the hash string with the remaining data
-				state.hashString1 += string(b64[state.blockHash1%64])
-				state.hashString2 += string(b64[state.blockHash2%64])
+				state.hashStringBuf1.WriteByte(b64[state.blockHash1%64])
+				state.hashStringBuf2.WriteByte(b64[state.blockHash2%64])
 			}
 			break
 		}
 	}
-	return fmt.Sprintf("%d:%s:%s", state.blockSize, state.hashString1, state.hashString2), nil
+	return fmt.Sprintf("%d:%s:%s", state.blockSize, state.hashStringBuf1.Bytes(), state.hashStringBuf2.Bytes()), nil
 }
 
 // FuzzyFilename computes the fuzzy hash of a file.
