@@ -13,7 +13,7 @@ func distance(str1, str2 string) int {
 	lenS1 := len(s1)
 	lenS2 := len(s2)
 
-	column := make([]int, 0, lenS1+1)
+	column := make([]int, lenS1+1)
 
 	for y := 1; y <= lenS1; y++ {
 		column[y] = y
