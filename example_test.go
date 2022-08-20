@@ -37,7 +37,7 @@ func ExampleFuzzyBytes() {
 func ExampleFuzzyReader() {
 	buffer := make([]byte, 4097)
 	rand.Read(buffer)
-	h, err := ssdeep.FuzzyReader(bytes.NewReader(buffer), len(buffer))
+	h, err := ssdeep.FuzzyReader(bytes.NewReader(buffer))
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -1,14 +1,17 @@
 package ssdeep
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"math/rand"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func assertHashEqual(t *testing.T, expected, actual string) {
@@ -57,16 +60,28 @@ func concatCopyPreAllocate(slices [][]byte) []byte {
 }
 
 func TestRollingHash(t *testing.T) {
-	s := ssdeepState{
-		rollingState: rollingState{
-			window: make([]byte, rollingWindow),
-		},
-	}
+	s := rollingState{}
 	s.rollHash(byte('A'))
-	rh := s.rollingState.rollSum()
-	if rh != 585 {
-		t.Fatal("Rolling hash not matching")
-	}
+	rh := s.rollSum()
+	require.Equal(t, rh, uint32(585), "Rolling hash not matching")
+}
+
+func TestFuzzyHashOutputsTheRightResult(t *testing.T) {
+	b, err := ioutil.ReadFile("LICENSE")
+	require.NoError(t, err)
+
+	b = concatCopyPreAllocate([][]byte{b, b})
+	s := New()
+
+	_, err = io.Copy(s, bytes.NewReader(b))
+	require.NoError(t, err)
+
+	expectedResult := "96:PuNQHTo6pYrYJWrYJ6N3w53hpYTdhuNQHTo6pYrYJWrYJ6N3w53hpYTP:+QHTrpYrsWrs6N3g3LaGQHTrpYrsWrsa"
+	prepend := []byte("prepend")
+
+	sum := s.Sum(prepend)
+
+	assertHashEqual(t, string(append(prepend, expectedResult...)), string(sum))
 }
 
 func TestFuzzyBytesOutputsTheRightResult(t *testing.T) {
@@ -129,29 +144,20 @@ func TestFuzzyBytesWithOutputsAnError(t *testing.T) {
 func BenchmarkRollingHash(b *testing.B) {
 	s := newSsdeepState()
 	for i := 0; i < b.N; i++ {
-		s.rollHash(byte(i))
+		s.rollingState.rollHash(byte(i))
 	}
 }
 
 func BenchmarkSumHash(b *testing.B) {
-	testHash := hashInit
+	var testHash byte = hashInit
 	data := []byte("Hereyougojustsomedatatomakeyouhappy")
 	for i := 0; i < b.N; i++ {
 		testHash = sumHash(data[rand.Intn(len(data))], testHash)
 	}
 }
 
-func BenchmarkBlockSize(b *testing.B) {
-	s := newSsdeepState()
-	for i := 0; i < b.N; i++ {
-		s.setBlockSize(207160)
-	}
-}
-
 func BenchmarkProcessByte(b *testing.B) {
 	s := newSsdeepState()
-	s.blockSize = 42
-	s.newRollingState()
 	for i := 0; i < b.N; i++ {
 		s.processByte(byte(i))
 	}

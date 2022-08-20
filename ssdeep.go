@@ -1,31 +1,37 @@
 package ssdeep
 
 import (
-	"bufio"
 	"bytes"
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"os"
 )
 
 var (
-	// ErrFileTooSmall is returned when a file contains too few bytes.
-	ErrFileTooSmall = errors.New("did not process files large enough to produce meaningful results")
-	// ErrBlockSizeTooSmall is returned when a file can't produce a large enough block size.
+	ErrFileTooSmall      = errors.New("did not process files large enough to produce meaningful results")
 	ErrBlockSizeTooSmall = errors.New("unable to establish a sufficient block size")
-	// ErrZeroBlockSize is returned if we fail to establish a non-zero block size.
-	ErrZeroBlockSize = errors.New("reached zero block size, unable to compute hash")
+	ErrZeroBlockSize     = errors.New("reached zero block size, unable to compute hash")
+	ErrFileTooBig        = errors.New("input file length exceeds max processable length")
 )
 
+type Hash interface {
+	io.Writer
+	Sum(b []byte) []byte
+}
+
 const (
-	rollingWindow uint32 = 7
-	blockMin             = 3
-	spamSumLength        = 64
-	minFileSize          = 4096
-	hashPrime     uint32 = 0x01000193
-	hashInit      uint32 = 0x28021967
-	b64String            = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+	rollingWindow     = 7
+	blockMin          = 3
+	spamSumLength     = 64
+	minFileSize       = 4096
+	hashPrime         = 0x93
+	hashInit          = 0x27
+	b64String         = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+	halfspamSumLength = spamSumLength / 2
+	numBlockhashes    = 31
+	maxTotalSize      = blockMin << (numBlockhashes - 1) * spamSumLength
 )
 
 var (
@@ -35,7 +41,7 @@ var (
 )
 
 type rollingState struct {
-	window []byte
+	window [rollingWindow + 1]byte
 	h1     uint32
 	h2     uint32
 	h3     uint32
@@ -47,37 +53,39 @@ func (rs *rollingState) rollSum() uint32 {
 }
 
 type ssdeepState struct {
-	rollingState   rollingState
-	blockSize      int
-	hashStringBuf1 bytes.Buffer
-	hashStringBuf2 bytes.Buffer
-	blockHash1     uint32
-	blockHash2     uint32
+	rollingState rollingState
+	iStart, iEnd int
+	totalSize    uint64
+	bsizeMask    uint32
+	blocks       [numBlockhashes]blockHashState
+}
+
+type blockHashState struct {
+	hashString             []byte
+	blockSize              uint32
+	blockHash1, blockHash2 byte
+	tail1, tail2           byte
 }
 
 func newSsdeepState() ssdeepState {
-	return ssdeepState{
-		blockHash1: hashInit,
-		blockHash2: hashInit,
-		rollingState: rollingState{
-			window: make([]byte, rollingWindow),
-		},
+	s := ssdeepState{
+		iEnd: 1,
 	}
-}
-
-func (state *ssdeepState) newRollingState() {
-	state.rollingState = rollingState{}
-	state.rollingState.window = make([]byte, rollingWindow)
+	for i := range s.blocks {
+		s.blocks[i].blockSize = blockMin << i
+		s.blocks[i].blockHash1 = hashInit
+		s.blocks[i].blockHash2 = hashInit
+	}
+	return s
 }
 
 // sumHash based on FNV hash
-func sumHash(c byte, h uint32) uint32 {
-	return (h * hashPrime) ^ uint32(c)
+func sumHash(c byte, h byte) byte {
+	return ((h * hashPrime) ^ c) % 64
 }
 
 // rollHash based on Adler checksum
-func (state *ssdeepState) rollHash(c byte) {
-	rs := &state.rollingState
+func (rs *rollingState) rollHash(c byte) {
 	rs.h2 -= rs.h1
 	rs.h2 += rollingWindow * uint32(c)
 	rs.h1 += uint32(c)
@@ -91,32 +99,58 @@ func (state *ssdeepState) rollHash(c byte) {
 	rs.h3 ^= uint32(c)
 }
 
-// getBlockSize calculates the block size based on file size
-func (state *ssdeepState) setBlockSize(n int) {
-	blockSize := blockMin
-	for blockSize*spamSumLength < n {
-		blockSize = blockSize * 2
-	}
-	state.blockSize = blockSize
-}
-
 func (state *ssdeepState) processByte(b byte) {
-	state.blockHash1 = sumHash(b, state.blockHash1)
-	state.blockHash2 = sumHash(b, state.blockHash2)
-	state.rollHash(b)
-	rh := int(state.rollingState.rollSum())
-	if rh%state.blockSize == (state.blockSize - 1) {
-		if state.hashStringBuf1.Len() < spamSumLength-1 {
-			state.hashStringBuf1.WriteByte(b64[state.blockHash1%64])
-			state.blockHash1 = hashInit
-		}
-		if rh%(state.blockSize*2) == ((state.blockSize * 2) - 1) {
-			if state.hashStringBuf2.Len() < spamSumLength/2-1 {
-				state.hashStringBuf2.WriteByte(b64[state.blockHash2%64])
-				state.blockHash2 = hashInit
+	for i := state.iStart; i < state.iEnd; i++ {
+		state.blocks[i].blockHash1 = sumHash(b, state.blocks[i].blockHash1)
+		state.blocks[i].blockHash2 = sumHash(b, state.blocks[i].blockHash2)
+	}
+
+	state.rollingState.rollHash(b)
+	rh := state.rollingState.rollSum()
+	if rh == math.MaxUint32 {
+		return
+	}
+	// rh % 2**N > 0 will match all rh % (3 * 2**N) > 0 but can use fast bitmask
+	if ((rh+1)/blockMin)&state.bsizeMask > 0 {
+		return
+	}
+	if (rh+1)%blockMin > 0 {
+		return
+	}
+
+	for i := state.iStart; i < state.iEnd; i++ {
+		block := &state.blocks[i]
+		if rh%block.blockSize == (block.blockSize - 1) {
+			if len(block.hashString) == 0 {
+				old := &state.blocks[state.iEnd-1]
+				if state.iEnd <= numBlockhashes-1 {
+					newb := &state.blocks[state.iEnd]
+					newb.blockHash1 = old.blockHash1
+					newb.blockHash2 = old.blockHash2
+					state.iEnd++
+				}
+			}
+			block.tail1 = block.blockHash1
+			block.tail2 = block.blockHash2
+			if len(block.hashString) < spamSumLength-1 {
+				block.hashString = append(block.hashString, block.tail1)
+				block.tail1 = 0
+				block.blockHash1 = hashInit
+				if len(block.hashString) < halfspamSumLength {
+					block.blockHash2 = hashInit
+					block.tail2 = 0
+				}
+			} else if state.isStartBlockFull() {
+				state.iStart++
+				state.bsizeMask = (state.bsizeMask << 1) + 1
 			}
 		}
 	}
+}
+
+func (state *ssdeepState) isStartBlockFull() bool {
+	return state.totalSize > uint64(state.blocks[state.iStart].blockSize*spamSumLength) &&
+		len(state.blocks[state.iStart+1].hashString) >= halfspamSumLength
 }
 
 // Reader is the minimum interface that ssdeep needs in order to calculate the fuzzy hash.
@@ -126,67 +160,75 @@ type Reader interface {
 	io.Reader
 }
 
-func (state *ssdeepState) process(r *bufio.Reader) error {
-	state.newRollingState()
-	b, err := r.ReadByte()
-	for err == nil {
+func (state *ssdeepState) Write(r []byte) (n int, err error) {
+	state.totalSize += uint64(len(r))
+	for _, b := range r {
 		state.processByte(b)
-		b, err = r.ReadByte()
 	}
-	if err == io.EOF {
-		return nil
-	}
-	return err
+	return len(r), nil
 }
 
 // FuzzyReader computes the fuzzy hash of a Reader interface with a given input size.
 // It is the caller's responsibility to append the filename, if any, to result after computation.
 // Returns an error when ssdeep could not be computed on the Reader.
-func FuzzyReader(f Reader, fileSize int) (string, error) {
-	if fileSize < minFileSize {
-		if !Force {
-			return "", ErrFileTooSmall
-		}
-	}
+func FuzzyReader(f io.Reader) (string, error) {
 	state := newSsdeepState()
-	state.setBlockSize(fileSize)
-	for {
-		if _, seekErr := f.Seek(0, 0); seekErr != nil {
-			return "", seekErr
-		}
+	if _, err := io.Copy(&state, f); err != nil {
+		return "", err
+	}
+	digest, err := state.digest()
+	return digest, err
+}
 
-		if state.blockSize < blockMin {
-			if !Force {
-				return "", ErrBlockSizeTooSmall
-			}
-		}
+func (state *ssdeepState) digest() (string, error) {
+	if !Force && state.totalSize <= minFileSize {
+		return "", ErrFileTooSmall
+	}
+	if state.totalSize > maxTotalSize {
+		return "", ErrFileTooBig
+	}
 
-		if state.blockSize <= 0 {
-			return "", ErrZeroBlockSize
-		}
+	var i = state.iStart
+	for ; uint64(uint32(blockMin)<<i*spamSumLength) < state.totalSize; i++ {
+	}
 
-		r := bufio.NewReader(f)
-		if err := state.process(r); err != nil {
-			return "", err
-		}
+	if i >= state.iEnd {
+		i = state.iEnd - 1
+	}
+	for i > state.iStart && len(state.blocks[i].hashString) < halfspamSumLength {
+		i--
+	}
+	var bl1 = state.blocks[i]
+	var bl2 = state.blocks[i+1]
+	if i >= state.iEnd-1 {
+		bl2 = state.blocks[i]
+		bl2.hashString = append([]byte{}, bl1.hashString...)
+	}
+	var rh = state.rollingState.rollSum()
 
-		if state.hashStringBuf1.Len() < spamSumLength/2 {
-			state.blockSize = state.blockSize >> 1
-			state.blockHash1 = hashInit
-			state.blockHash2 = hashInit
-			state.hashStringBuf1.Reset()
-			state.hashStringBuf2.Reset()
-		} else {
-			rh := state.rollingState.rollSum()
-			if rh != 0 {
-				// Finalize the hash string with the remaining data
-				state.hashStringBuf1.WriteByte(b64[state.blockHash1%64])
-				state.hashStringBuf2.WriteByte(b64[state.blockHash2%64])
-			}
-			break
+	if len(bl2.hashString) > halfspamSumLength-1 {
+		bl2.hashString = bl2.hashString[:halfspamSumLength-1]
+	}
+
+	if rh != 0 {
+		bl1.hashString = append(bl1.hashString, bl1.blockHash1)
+		bl2.hashString = append(bl2.hashString, bl2.blockHash2)
+	} else {
+		if len(bl1.hashString) == spamSumLength-1 && bl1.tail1 != 0 {
+			bl1.hashString = append(bl1.hashString, bl1.tail1)
+		}
+		if bl2.tail2 != 0 {
+			bl2.hashString = append(bl2.hashString, bl2.tail2)
 		}
 	}
-	return fmt.Sprintf("%d:%s:%s", state.blockSize, state.hashStringBuf1.Bytes(), state.hashStringBuf2.Bytes()), nil
+	for i := range bl1.hashString {
+		bl1.hashString[i] = b64[bl1.hashString[i]]
+	}
+	for i := range bl2.hashString {
+		bl2.hashString[i] = b64[bl2.hashString[i]]
+	}
+
+	return fmt.Sprintf("%d:%s:%s", bl1.blockSize, bl1.hashString, bl2.hashString), nil
 }
 
 // FuzzyFilename computes the fuzzy hash of a file.
@@ -217,11 +259,7 @@ func FuzzyFile(f *os.File) (string, error) {
 	if _, err = f.Seek(0, io.SeekStart); err != nil {
 		return "", err
 	}
-	stat, err := f.Stat()
-	if err != nil {
-		return "", err
-	}
-	out, err := FuzzyReader(f, int(stat.Size()))
+	out, err := FuzzyReader(f)
 	if err != nil {
 		return out, err
 	}
@@ -233,13 +271,26 @@ func FuzzyFile(f *os.File) (string, error) {
 // It is the caller's responsibility to append the filename, if any, to result after computation.
 // Returns an error when ssdeep could not be computed on the buffer.
 func FuzzyBytes(buffer []byte) (string, error) {
-	n := len(buffer)
 	br := bytes.NewReader(buffer)
 
-	result, err := FuzzyReader(br, n)
+	result, err := FuzzyReader(br)
 	if err != nil {
 		return "", err
 	}
 
 	return result, nil
+}
+
+func (state *ssdeepState) Sum(b []byte) []byte {
+	digest, _ := state.digest()
+	return append(b, digest...)
+}
+
+func New() *ssdeepState {
+	s := newSsdeepState()
+	return &s
+}
+
+func (state *ssdeepState) Reset() {
+	*state = newSsdeepState()
 }
