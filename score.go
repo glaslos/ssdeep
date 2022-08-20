@@ -2,6 +2,7 @@ package ssdeep
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"strconv"
 	"strings"
@@ -19,14 +20,15 @@ var (
 // Returns a value from zero to 100 indicating the match score of the two signatures.
 // A match score of zero indicates the signatures did not match.
 // Returns an error when one of the inputs are not valid signatures.
-func Distance(hash1, hash2 string) (score int, err error) {
+func Distance(hash1, hash2 string) (int, error) {
+	var score int
 	hash1BlockSize, hash1String1, hash1String2, err := splitSsdeep(hash1)
 	if err != nil {
-		return
+		return score, err
 	}
 	hash2BlockSize, hash2String1, hash2String2, err := splitSsdeep(hash2)
 	if err != nil {
-		return
+		return score, err
 	}
 
 	if hash1BlockSize == hash2BlockSize && hash1String1 == hash2String1 {
@@ -35,7 +37,7 @@ func Distance(hash1, hash2 string) (score int, err error) {
 
 	// We can only compare equal or *2 block sizes
 	if hash1BlockSize != hash2BlockSize && hash1BlockSize != hash2BlockSize*2 && hash2BlockSize != hash1BlockSize*2 {
-		return
+		return score, err
 	}
 
 	if hash1BlockSize == hash2BlockSize {
@@ -47,30 +49,25 @@ func Distance(hash1, hash2 string) (score int, err error) {
 	} else {
 		score = scoreDistance(hash1String2, hash2String1, hash2BlockSize)
 	}
-	return
+	return score, nil
 }
 
-func splitSsdeep(hash string) (blockSize int, hashString1, hashString2 string, err error) {
+func splitSsdeep(hash string) (int, string, string, error) {
 	if hash == "" {
-		err = ErrEmptyHash
-		return
+		return 0, "", "", ErrEmptyHash
 	}
 
 	parts := strings.Split(hash, ":")
 	if len(parts) != 3 {
-		err = ErrInvalidFormat
-		return
+		return 0, "", "", ErrInvalidFormat
 	}
 
-	blockSize, err = strconv.Atoi(parts[0])
+	blockSize, err := strconv.Atoi(parts[0])
 	if err != nil {
-		err = ErrInvalidFormat
-		return
+		return blockSize, "", "", fmt.Errorf("%s: %w", ErrInvalidFormat.Error(), err)
 	}
 
-	hashString1 = parts[1]
-	hashString2 = parts[2]
-	return
+	return blockSize, parts[1], parts[2], nil
 }
 
 func scoreDistance(h1, h2 string, blockSize int) int {

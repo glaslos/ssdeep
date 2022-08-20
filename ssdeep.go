@@ -67,7 +67,7 @@ type blockHashState struct {
 	tail1, tail2           byte
 }
 
-func newSsdeepState() ssdeepState {
+func newSSDEEPState() ssdeepState {
 	s := ssdeepState{
 		iEnd: 1,
 	}
@@ -172,7 +172,7 @@ func (state *ssdeepState) Write(r []byte) (n int, err error) {
 // It is the caller's responsibility to append the filename, if any, to result after computation.
 // Returns an error when ssdeep could not be computed on the Reader.
 func FuzzyReader(f io.Reader) (string, error) {
-	state := newSsdeepState()
+	state := newSSDEEPState()
 	if _, err := io.Copy(&state, f); err != nil {
 		return "", err
 	}
@@ -287,10 +287,10 @@ func (state *ssdeepState) Sum(b []byte) []byte {
 }
 
 func New() *ssdeepState {
-	s := newSsdeepState()
+	s := newSSDEEPState()
 	return &s
 }
 
 func (state *ssdeepState) Reset() {
-	*state = newSsdeepState()
+	*state = newSSDEEPState()
 }

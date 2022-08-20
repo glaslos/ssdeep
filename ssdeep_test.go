@@ -142,7 +142,7 @@ func TestFuzzyBytesWithOutputsAnError(t *testing.T) {
 }
 
 func BenchmarkRollingHash(b *testing.B) {
-	s := newSsdeepState()
+	s := newSSDEEPState()
 	for i := 0; i < b.N; i++ {
 		s.rollingState.rollHash(byte(i))
 	}
@@ -157,7 +157,7 @@ func BenchmarkSumHash(b *testing.B) {
 }
 
 func BenchmarkProcessByte(b *testing.B) {
-	s := newSsdeepState()
+	s := newSSDEEPState()
 	for i := 0; i < b.N; i++ {
 		s.processByte(byte(i))
 	}
