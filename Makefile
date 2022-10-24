@@ -17,6 +17,10 @@ $(OUTPUT): app/ssdeep.go ssdeep.go score.go
 .PHONY: clean
 clean:
 	rm -rf dist/
+	rm -rf pprof/
+	rm -rf ssdeep.test
+	rm -rf bench_current.test
+	rm -rf bench_head.test
 
 .PHONY: tag
 tag:
