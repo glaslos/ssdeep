@@ -14,13 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func assertHashEqual(t *testing.T, expected, actual string) {
-	if expected != actual {
-		t.Fatalf("Hash mismatch: %s (expected)\n"+
-			"            != %s (actual)", expected, actual)
-	}
-}
-
 func TestIntegrity(t *testing.T) {
 	rand.Seed(1)
 	resultsFile, err := ioutil.ReadFile("ssdeep_results.json")
@@ -41,7 +34,7 @@ func TestIntegrity(t *testing.T) {
 			assert.NoError(t, err)
 			result, err := FuzzyBytes(blob)
 			assert.NoError(t, err)
-			assertHashEqual(t, originalResults[fmt.Sprint(size)], result)
+			require.Equal(t, originalResults[fmt.Sprint(size)], result)
 		})
 	}
 }
@@ -81,7 +74,7 @@ func TestFuzzyHashOutputsTheRightResult(t *testing.T) {
 
 	sum := s.Sum(prepend)
 
-	assertHashEqual(t, string(append(prepend, expectedResult...)), string(sum))
+	require.Equal(t, string(append(prepend, expectedResult...)), string(sum))
 }
 
 func TestFuzzyBytesOutputsTheRightResult(t *testing.T) {
@@ -93,7 +86,7 @@ func TestFuzzyBytesOutputsTheRightResult(t *testing.T) {
 	assert.NoError(t, err)
 
 	expectedResult := "96:PuNQHTo6pYrYJWrYJ6N3w53hpYTdhuNQHTo6pYrYJWrYJ6N3w53hpYTP:+QHTrpYrsWrs6N3g3LaGQHTrpYrsWrsa"
-	assertHashEqual(t, expectedResult, hashResult)
+	require.Equal(t, expectedResult, hashResult)
 }
 
 func TestFuzzyFileOutputsTheRightResult(t *testing.T) {
@@ -105,7 +98,7 @@ func TestFuzzyFileOutputsTheRightResult(t *testing.T) {
 	assert.NoError(t, err)
 
 	expectedResult := "1536:74peLhFipssVfuInITTTZzMoW0379xy3u:VVFosEfudTj579k3u"
-	assertHashEqual(t, expectedResult, hashResult)
+	require.Equal(t, expectedResult, hashResult)
 
 }
 
@@ -115,7 +108,7 @@ func TestFuzzyFileOutputsAnErrorForSmallFiles(t *testing.T) {
 	defer f.Close()
 
 	_, err = FuzzyFile(f)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestFuzzyFilenameOutputsTheRightResult(t *testing.T) {
@@ -123,22 +116,22 @@ func TestFuzzyFilenameOutputsTheRightResult(t *testing.T) {
 	assert.NoError(t, err)
 
 	expectedResult := "1536:74peLhFipssVfuInITTTZzMoW0379xy3u:VVFosEfudTj579k3u"
-	assertHashEqual(t, expectedResult, hashResult)
+	require.Equal(t, expectedResult, hashResult)
 }
 
 func TestFuzzyFilenameOutputsErrorWhenFileNotExists(t *testing.T) {
 	_, err := FuzzyFilename("foo.bar")
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestFuzzyBytesWithLenLessThanMinimumOutputsAnError(t *testing.T) {
 	_, err := FuzzyBytes([]byte{})
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestFuzzyBytesWithOutputsAnError(t *testing.T) {
 	_, err := FuzzyBytes(make([]byte, 4096))
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func BenchmarkRollingHash(b *testing.B) {

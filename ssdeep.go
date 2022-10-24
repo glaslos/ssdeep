@@ -280,17 +280,3 @@ func FuzzyBytes(buffer []byte) (string, error) {
 
 	return result, nil
 }
-
-func (state *ssdeepState) Sum(b []byte) []byte {
-	digest, _ := state.digest()
-	return append(b, digest...)
-}
-
-func New() *ssdeepState {
-	s := newSSDEEPState()
-	return &s
-}
-
-func (state *ssdeepState) Reset() {
-	*state = newSSDEEPState()
-}
