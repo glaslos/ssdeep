@@ -27,4 +27,5 @@ ssdeep
 dist/
 
 .idea
+.vscode
 pprof/
