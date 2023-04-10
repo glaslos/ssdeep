@@ -5,23 +5,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestIntegrity(t *testing.T) {
 	rand.Seed(1)
-	resultsFile, err := ioutil.ReadFile("ssdeep_results.json")
-	assert.NoError(t, err)
+
+	fh, err := os.Open("ssdeep_results.json")
+	require.NoError(t, err)
 
 	originalResults := make(map[string]string)
-	err = json.Unmarshal(resultsFile, &originalResults)
-	assert.NoError(t, err)
+	err = json.NewDecoder(fh).Decode(&originalResults)
+	require.NoError(t, err)
 
 	for i := 4097; i < 10*1024*1024; i += 4096 * 10 {
 		t.Run(fmt.Sprintf("Bytes in size of %d", i), func(t *testing.T) {
@@ -31,9 +30,9 @@ func TestIntegrity(t *testing.T) {
 			}
 			blob := make([]byte, size)
 			_, err = rand.Read(blob)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			result, err := FuzzyBytes(blob)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			require.Equal(t, originalResults[fmt.Sprint(size)], result)
 		})
 	}
@@ -60,7 +59,9 @@ func TestRollingHash(t *testing.T) {
 }
 
 func TestFuzzyHashOutputsTheRightResult(t *testing.T) {
-	b, err := ioutil.ReadFile("LICENSE")
+	fh, err := os.Open("LICENSE")
+	require.NoError(t, err)
+	b, err := io.ReadAll(fh)
 	require.NoError(t, err)
 
 	b = concatCopyPreAllocate([][]byte{b, b})
@@ -78,12 +79,14 @@ func TestFuzzyHashOutputsTheRightResult(t *testing.T) {
 }
 
 func TestFuzzyBytesOutputsTheRightResult(t *testing.T) {
-	b, err := ioutil.ReadFile("LICENSE")
-	assert.NoError(t, err)
+	fh, err := os.Open("LICENSE")
+	require.NoError(t, err)
+	b, err := io.ReadAll(fh)
+	require.NoError(t, err)
 
 	b = concatCopyPreAllocate([][]byte{b, b})
 	hashResult, err := FuzzyBytes(b)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	expectedResult := "96:PuNQHTo6pYrYJWrYJ6N3w53hpYTdhuNQHTo6pYrYJWrYJ6N3w53hpYTP:+QHTrpYrsWrs6N3g3LaGQHTrpYrsWrsa"
 	require.Equal(t, expectedResult, hashResult)
@@ -91,11 +94,11 @@ func TestFuzzyBytesOutputsTheRightResult(t *testing.T) {
 
 func TestFuzzyFileOutputsTheRightResult(t *testing.T) {
 	f, err := os.Open("ssdeep_results.json")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer f.Close()
 
 	hashResult, err := FuzzyFile(f)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	expectedResult := "1536:74peLhFipssVfuInITTTZzMoW0379xy3u:VVFosEfudTj579k3u"
 	require.Equal(t, expectedResult, hashResult)
@@ -104,7 +107,7 @@ func TestFuzzyFileOutputsTheRightResult(t *testing.T) {
 
 func TestFuzzyFileOutputsAnErrorForSmallFiles(t *testing.T) {
 	f, err := os.Open("LICENSE")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer f.Close()
 
 	_, err = FuzzyFile(f)
@@ -113,7 +116,7 @@ func TestFuzzyFileOutputsAnErrorForSmallFiles(t *testing.T) {
 
 func TestFuzzyFilenameOutputsTheRightResult(t *testing.T) {
 	hashResult, err := FuzzyFilename("ssdeep_results.json")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	expectedResult := "1536:74peLhFipssVfuInITTTZzMoW0379xy3u:VVFosEfudTj579k3u"
 	require.Equal(t, expectedResult, hashResult)

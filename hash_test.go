@@ -1,12 +1,11 @@
 package ssdeep
 
 import (
-	"fmt"
 	"hash"
-	"io/ioutil"
+	"io"
+	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -16,8 +15,10 @@ func TestHashinterface(t *testing.T) {
 	t.Log(h.BlockSize())
 	h.Reset()
 
-	b, err := ioutil.ReadFile("ssdeep_results.json")
-	assert.NoError(t, err)
+	fh, err := os.Open("ssdeep_results.json")
+	require.NoError(t, err)
+	b, err := io.ReadAll(fh)
+	require.NoError(t, err)
 
 	n, err := h.Write(b)
 	require.NoError(t, err)
@@ -31,23 +32,25 @@ func TestHashinterface(t *testing.T) {
 	require.Equal(t, expectedResult, string(hashResult))
 
 	t.Log(hashResult)
-	t.Log(fmt.Sprintf("%x", hashResult[:]))
+	t.Logf("%x", hashResult[:])
 }
 
 func TestHashWrite(t *testing.T) {
 	// hash using the hash.Hash interface methods
-	b, err := ioutil.ReadFile("ssdeep_results.json")
-	assert.NoError(t, err)
+	fh, err := os.Open("ssdeep_results.json")
+	require.NoError(t, err)
+	b, err := io.ReadAll(fh)
+	require.NoError(t, err)
 
 	h1 := New()
 	h1.Write([]byte("1234"))
 	h1.Write(b)
-	t.Log(fmt.Sprintf("h1: %x", h1.Sum(nil)))
+	t.Logf("h1: %x", h1.Sum(nil))
 
 	// hash from read
 	h2, err := FuzzyBytes(append([]byte("1234"), b...))
 	require.NoError(t, err)
-	t.Log(fmt.Sprintf("h2: %s", h2))
+	t.Logf("h2: %s", h2)
 
 	// compare hashes
 	diff := distance(string(h1.Sum(nil)), h2)
