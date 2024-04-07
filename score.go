@@ -70,7 +70,7 @@ func splitSsdeep(hash string) (int, string, string, error) {
 	return blockSize, parts[1], parts[2], nil
 }
 
-func scoreDistance(h1, h2 string, blockSize int) int {
+func scoreDistance(h1, h2 string, _ int) int {
 	d := distance(h1, h2)
 	d = (d * spamSumLength) / (len(h1) + len(h2))
 	d = (100 * d) / spamSumLength
