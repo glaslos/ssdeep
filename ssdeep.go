@@ -51,6 +51,15 @@ type rollingState struct {
 func (rs *rollingState) rollSum() uint32 {
 	return rs.h1 + rs.h2 + rs.h3
 }
+func (rs *rollingState) rollReset() {
+	rs.h1 = 0
+	rs.h2 = 0
+	rs.h3 = 0
+	rs.n = 0
+	for i := 0; i < len(rs.window); i++ {
+		rs.window[i] = 0
+	}
+}
 
 type ssdeepState struct {
 	rollingState rollingState
