@@ -14,6 +14,10 @@ var h3 = "196608:pDSC8olnoL1v/uawvbQD7XlZUFYzYyMb615NktYHF7dREN/JNnQrmhnUPI+/n2Y
 
 var h4 = "196608:7DSC8olnoL1v/uawvbQD7XlZUFYzYyMb615NktYHF7dREN/JNnQrmhnUPI+/n2Y7:3DHoJXv7XOq7Mb2TwYHXREN/3QrmktPt"
 
+var h5 = "24:YDVLfsT1ds/1H9Wpgq7n4XMijV6h4Z3QCw4qat:YD51H9CiMuV6uACwVat"
+
+var h6 = "24:YDVLfyvDj+C+opg8DV0Mdle6hPZ3QCw4qat:YDMvDj+C+kBOM+6HACwVat"
+
 func assertDistanceEqual(t *testing.T, expected, actual int) {
 	if expected != actual {
 		t.Fatalf("Distance mismatch: %d (expected)\n"+
@@ -37,6 +41,12 @@ func TestHashDistance2(t *testing.T) {
 	d, err := Distance(h3, h4)
 	require.NoError(t, err)
 	assertDistanceEqual(t, 97, d)
+}
+
+func TestHashDistance3(t *testing.T) {
+	d, err := Distance(h5, h6)
+	require.NoError(t, err)
+	assertDistanceEqual(t, 54, d)
 }
 
 func TestEmptyHash1(t *testing.T) {

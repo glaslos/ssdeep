@@ -71,6 +71,9 @@ func splitSsdeep(hash string) (int, string, string, error) {
 }
 
 func scoreDistance(h1, h2 string, _ int) int {
+	if !hasCommonSubstring(h1, h2) {
+		return 0
+	}
 	d := distance(h1, h2)
 	d = (d * spamSumLength) / (len(h1) + len(h2))
 	d = (100 * d) / spamSumLength
@@ -82,4 +85,37 @@ func scoreDistance(h1, h2 string, _ int) int {
 	}
 	*/
 	return d
+}
+func hasCommonSubstring(s1, s2 string) bool {
+	i := 0
+	j := 0
+	s1Len := len(s1)
+	s2Len := len(s2)
+	hashes := make([]uint32, (spamSumLength - (rollingWindow - 1)))
+	if s1Len < rollingWindow || s2Len < rollingWindow {
+		return false
+	}
+	state := &rollingState{}
+	for i = 0; i < rollingWindow-1; i++ {
+		state.rollHash(s1[i])
+	}
+	for i = rollingWindow - 1; i < s1Len; i++ {
+		state.rollHash(s1[i])
+		hashes[i-(rollingWindow-1)] = state.rollSum()
+	}
+	s1Len -= (rollingWindow - 1)
+	state.rollReset()
+	for j = 0; j < rollingWindow-1; j++ {
+		state.rollHash(s2[j])
+	}
+	for j = 0; j < s2Len-(rollingWindow-1); j++ {
+		state.rollHash(s2[j+(rollingWindow-1)])
+		var h = state.rollSum()
+		for i = 0; i < s1Len; i++ {
+			if hashes[i] == h && s1[i:i+rollingWindow] == s2[j:j+rollingWindow] {
+				return true
+			}
+		}
+	}
+	return false
 }
