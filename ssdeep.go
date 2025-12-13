@@ -198,7 +198,7 @@ func (state *ssdeepState) digest() (string, error) {
 	}
 
 	var i = state.iStart
-	for ; uint64(uint32(blockMin)<<i*spamSumLength) < state.totalSize; i++ {
+	for ; uint64(uint32(blockMin)<<i)*spamSumLength < state.totalSize; i++ {
 	}
 
 	if i >= state.iEnd {

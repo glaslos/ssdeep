@@ -158,3 +158,55 @@ func BenchmarkProcessByte(b *testing.B) {
 		s.processByte(byte(i))
 	}
 }
+
+func TestDigestLargeFile(t *testing.T) {
+	state := ssdeepState{
+		rollingState: rollingState{
+			window: [8]uint8{97, 97, 97, 97, 97, 97, 97, 0},
+			h1:     679,
+			h2:     2716,
+			h3:     2216757313,
+			n:      6,
+		},
+		iStart:    0,
+		iEnd:      2,
+		totalSize: 4500000000,
+		bsizeMask: 0,
+		blocks: [31]blockHashState{
+			{hashString: []uint8{45, 35}, blockSize: 3, blockHash1: 53, blockHash2: 53, tail1: 0, tail2: 0},
+			{hashString: nil, blockSize: 6, blockHash1: 39, blockHash2: 39, tail1: 0, tail2: 0},
+			{hashString: nil, blockSize: 12, blockHash1: 39, blockHash2: 39, tail1: 0, tail2: 0},
+			{hashString: nil, blockSize: 24, blockHash1: 39, blockHash2: 39, tail1: 0, tail2: 0},
+			{hashString: nil, blockSize: 48, blockHash1: 39, blockHash2: 39, tail1: 0, tail2: 0},
+			{hashString: nil, blockSize: 96, blockHash1: 39, blockHash2: 39, tail1: 0, tail2: 0},
+			{hashString: nil, blockSize: 192, blockHash1: 39, blockHash2: 39, tail1: 0, tail2: 0},
+			{hashString: nil, blockSize: 384, blockHash1: 39, blockHash2: 39, tail1: 0, tail2: 0},
+			{hashString: nil, blockSize: 768, blockHash1: 39, blockHash2: 39, tail1: 0, tail2: 0},
+			{hashString: nil, blockSize: 1536, blockHash1: 39, blockHash2: 39, tail1: 0, tail2: 0},
+			{hashString: nil, blockSize: 3072, blockHash1: 39, blockHash2: 39, tail1: 0, tail2: 0},
+			{hashString: nil, blockSize: 6144, blockHash1: 39, blockHash2: 39, tail1: 0, tail2: 0},
+			{hashString: nil, blockSize: 12288, blockHash1: 39, blockHash2: 39, tail1: 0, tail2: 0},
+			{hashString: nil, blockSize: 24576, blockHash1: 39, blockHash2: 39, tail1: 0, tail2: 0},
+			{hashString: nil, blockSize: 49152, blockHash1: 39, blockHash2: 39, tail1: 0, tail2: 0},
+			{hashString: nil, blockSize: 98304, blockHash1: 39, blockHash2: 39, tail1: 0, tail2: 0},
+			{hashString: nil, blockSize: 196608, blockHash1: 39, blockHash2: 39, tail1: 0, tail2: 0},
+			{hashString: nil, blockSize: 393216, blockHash1: 39, blockHash2: 39, tail1: 0, tail2: 0},
+			{hashString: nil, blockSize: 786432, blockHash1: 39, blockHash2: 39, tail1: 0, tail2: 0},
+			{hashString: nil, blockSize: 1572864, blockHash1: 39, blockHash2: 39, tail1: 0, tail2: 0},
+			{hashString: nil, blockSize: 3145728, blockHash1: 39, blockHash2: 39, tail1: 0, tail2: 0},
+			{hashString: nil, blockSize: 6291456, blockHash1: 39, blockHash2: 39, tail1: 0, tail2: 0},
+			{hashString: nil, blockSize: 12582912, blockHash1: 39, blockHash2: 39, tail1: 0, tail2: 0},
+			{hashString: nil, blockSize: 25165824, blockHash1: 39, blockHash2: 39, tail1: 0, tail2: 0},
+			{hashString: nil, blockSize: 50331648, blockHash1: 39, blockHash2: 39, tail1: 0, tail2: 0},
+			{hashString: nil, blockSize: 100663296, blockHash1: 39, blockHash2: 39, tail1: 0, tail2: 0},
+			{hashString: nil, blockSize: 201326592, blockHash1: 39, blockHash2: 39, tail1: 0, tail2: 0},
+			{hashString: nil, blockSize: 402653184, blockHash1: 39, blockHash2: 39, tail1: 0, tail2: 0},
+			{hashString: nil, blockSize: 805306368, blockHash1: 39, blockHash2: 39, tail1: 0, tail2: 0},
+			{hashString: nil, blockSize: 1610612736, blockHash1: 39, blockHash2: 39, tail1: 0, tail2: 0},
+			{hashString: nil, blockSize: 3221225472, blockHash1: 39, blockHash2: 39, tail1: 0, tail2: 0},
+		},
+	}
+	digest, err := state.digest()
+	require.NoError(t, err)
+	require.Equal(t, "3:tj1:n", digest)
+}
