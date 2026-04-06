@@ -29,8 +29,16 @@ tag:
 
 .PHONY: build_release
 build_release: clean
-	cd app; gox -arch="amd64" -os="windows darwin" -output="../dist/$(NAME)-{{.Arch}}-{{.OS}}" -ldflags=$(LDFLAGS)
-	cd app; gox -arch="amd64 arm" -os="linux" -output="../dist/$(NAME)-{{.Arch}}-{{.OS}}" -ldflags=$(LDFLAGS)
+	@mkdir -p dist
+	@set -e; \
+	for os in windows darwin linux; do \
+	  for arch in amd64 arm64; do \
+	    out="dist/$(NAME)-$$arch-$$os"; \
+	    [ "$$os" = "windows" ] && out="$$out.exe"; \
+	    GOOS=$$os GOARCH=$$arch CGO_ENABLED=0 \
+	      go build -trimpath -ldflags=$(LDFLAGS) -o $$out ./app; \
+	  done; \
+	done
 
 .PHONY: upx
 upx:
