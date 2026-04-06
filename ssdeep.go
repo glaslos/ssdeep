@@ -74,6 +74,7 @@ type blockHashState struct {
 	blockSize              uint32
 	blockHash1, blockHash2 byte
 	tail1, tail2           byte
+	hasTail1, hasTail2     bool
 }
 
 func newSSDEEPState() ssdeepState {
@@ -144,14 +145,22 @@ func (state *ssdeepState) processByte(b byte) {
 			if len(block.hashString) < spamSumLength-1 {
 				block.hashString = append(block.hashString, block.tail1)
 				block.tail1 = 0
+				block.hasTail1 = false
 				block.blockHash1 = hashInit
 				if len(block.hashString) < halfspamSumLength {
 					block.blockHash2 = hashInit
 					block.tail2 = 0
+					block.hasTail2 = false
+				} else {
+					block.hasTail2 = true
 				}
-			} else if state.isStartBlockFull() {
-				state.iStart++
-				state.bsizeMask = (state.bsizeMask << 1) + 1
+			} else {
+				block.hasTail1 = true
+				block.hasTail2 = true
+				if state.isStartBlockFull() {
+					state.iStart++
+					state.bsizeMask = (state.bsizeMask << 1) + 1
+				}
 			}
 		}
 	}
@@ -223,10 +232,10 @@ func (state *ssdeepState) digest() (string, error) {
 		bl1.hashString = append(bl1.hashString, bl1.blockHash1)
 		bl2.hashString = append(bl2.hashString, bl2.blockHash2)
 	} else {
-		if len(bl1.hashString) == spamSumLength-1 && bl1.tail1 != 0 {
+		if bl1.hasTail1 {
 			bl1.hashString = append(bl1.hashString, bl1.tail1)
 		}
-		if bl2.tail2 != 0 {
+		if bl2.hasTail2 {
 			bl2.hashString = append(bl2.hashString, bl2.tail2)
 		}
 	}
