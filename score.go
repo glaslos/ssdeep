@@ -92,6 +92,9 @@ func hasCommonSubstring(s1, s2 string) bool {
 	s1Len := len(s1)
 	s2Len := len(s2)
 	hashes := make([]uint32, (spamSumLength - (rollingWindow - 1)))
+	if s1Len > spamSumLength || s2Len > spamSumLength {
+		return false
+	}
 	if s1Len < rollingWindow || s2Len < rollingWindow {
 		return false
 	}
