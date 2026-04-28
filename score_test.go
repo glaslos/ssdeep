@@ -1,6 +1,7 @@
 package ssdeep
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -78,6 +79,31 @@ func TestInvalidHash2(t *testing.T) {
 	if d != 0 {
 		t.Errorf("hash1 and hash2 are nil: %d", d)
 	}
+}
+
+// Crash seed: body length 65 triggers index out of range [58] with length 58.
+func TestHasCommonSubstringOOB(t *testing.T) {
+	s1 := "3:" + strings.Repeat("0", 65) + ":"
+	s2 := "3:0000000:"
+	// Must not panic.
+	_, err := Distance(s1, s2)
+	if err != nil {
+		t.Logf("Distance returned error (acceptable): %v", err)
+	}
+}
+
+// FuzzSSDeepDistanceDirect feeds arbitrary hash strings directly to Distance.
+// The library must not panic; an error return is acceptable.
+func FuzzSSDeepDistanceDirect(f *testing.F) {
+	f.Add("3:"+strings.Repeat("0", 65)+":", "3:0000000:")
+	f.Add("3:abc:abc", "3:abc:abc")
+	f.Add("", "")
+	f.Add("not-a-hash", "also-not-a-hash")
+
+	f.Fuzz(func(t *testing.T, s1, s2 string) {
+		// Must not panic.
+		_, _ = Distance(s1, s2)
+	})
 }
 
 func BenchmarkDistance(b *testing.B) {
