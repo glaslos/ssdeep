@@ -63,6 +63,8 @@ func TestDistanceMatchesSsdeep(t *testing.T) {
 		{"no cap at block size 96", "96:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef:ghijklmnop", "96:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdeX:zyxwvutsrq", 97},
 		{"cap at double block size", "6:ABCDEFGHIJKLMNOPQRST:abcdefghijklmnopqrst", "12:abcdefghijklmnopqrsX:ZYXWVUTSRQ", 80},
 		{"cap at half block size", "12:abcdefghijklmnopqrsX:ZYXWVUTSRQ", "6:ABCDEFGHIJKLMNOPQRST:abcdefghijklmnopqrst", 80},
+		{"cap at block size 0", "0:ABCDEFGHIJ:ABCDEFGHIJ", "0:ABCDEFGHIX:ABCDEFGHIX", 0},
+		{"no cap at a negative block size", "-3:ABCDEFGHIJ:ABCDEFGHIJ", "-3:ABCDEFGHIX:ABCDEFGHIX", 91},
 		{"runs of more than three characters", "192:XYZXYZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABCDEFGHIJKLMNOP:qq", "192:XYZXYZAAAABCDEFGHIJKLMNOP:rr", 100},
 		{"identical after the sequence elimination", "3:AAAAAABCDEFGHIJ:abc", "3:AAABCDEFGHIJ:abc", 100},
 		{"same first part, other second part", "3:ABCDEFGHIJ:abc", "3:ABCDEFGHIJ:xyz", 10},
@@ -131,7 +133,10 @@ func FuzzSSDeepDistanceDirect(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, s1, s2 string) {
 		// Must not panic.
-		_, _ = Distance(s1, s2)
+		d, err := Distance(s1, s2)
+		if err == nil && (d < 0 || d > 100) {
+			t.Fatalf("Distance(%q, %q) = %d, want a score from 0 to 100", s1, s2, d)
+		}
 	})
 }
 

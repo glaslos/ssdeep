@@ -99,7 +99,9 @@ func scoreDistance(h1, h2 string, blockSize int) int {
 	// A short hash of a small block size matches too easily. Below a block
 	// size of 45, the score cannot be higher than the block size in units of
 	// blockMin, times the length of the shorter hash (as in ssdeep 2.14.1).
-	if blockSize >= (99+rollingWindow)/rollingWindow*blockMin {
+	// ssdeep reads the block size as an unsigned number, so a negative block
+	// size gets no cap.
+	if blockSize < 0 || blockSize >= (99+rollingWindow)/rollingWindow*blockMin {
 		return d
 	}
 	shorter := len(h1)
