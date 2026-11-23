@@ -36,7 +36,7 @@ func Distance(hash1, hash2 string) (int, error) {
 	hash2String1 = eliminateSequences(hash2String1)
 	hash2String2 = eliminateSequences(hash2String2)
 
-	if hash1BlockSize == hash2BlockSize && hash1String1 == hash2String1 {
+	if hash1BlockSize == hash2BlockSize && hash1String1 == hash2String1 && hash1String2 == hash2String2 {
 		return 100, nil
 	}
 

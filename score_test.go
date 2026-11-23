@@ -64,6 +64,10 @@ func TestDistanceMatchesSsdeep(t *testing.T) {
 		{"cap at double block size", "6:ABCDEFGHIJKLMNOPQRST:abcdefghijklmnopqrst", "12:abcdefghijklmnopqrsX:ZYXWVUTSRQ", 80},
 		{"cap at half block size", "12:abcdefghijklmnopqrsX:ZYXWVUTSRQ", "6:ABCDEFGHIJKLMNOPQRST:abcdefghijklmnopqrst", 80},
 		{"runs of more than three characters", "192:XYZXYZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABCDEFGHIJKLMNOP:qq", "192:XYZXYZAAAABCDEFGHIJKLMNOP:rr", 100},
+		{"identical after the sequence elimination", "3:AAAAAABCDEFGHIJ:abc", "3:AAABCDEFGHIJ:abc", 100},
+		{"same first part, other second part", "3:ABCDEFGHIJ:abc", "3:ABCDEFGHIJ:xyz", 10},
+		{"same short first part, other second part", "48:ABC:abc", "48:ABC:xyz", 0},
+		{"identical short signatures", "3:ABC:abc", "3:ABC:abc", 100},
 	}
 
 	for _, tt := range tests {
