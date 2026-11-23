@@ -50,6 +50,30 @@ func TestHashDistance3(t *testing.T) {
 	assertDistanceEqual(t, 54, d)
 }
 
+// The expected scores come from "ssdeep -a -k" of ssdeep 2.14.1.
+func TestDistanceMatchesSsdeep(t *testing.T) {
+	tests := []struct {
+		name  string
+		hash1 string
+		hash2 string
+		want  int
+	}{
+		{"cap at block size 3", "3:ABCDEFGHIJKLMNOPQRST:abcdefghij", "3:ABCDEFGHIJKLMNOPQRSX:zyxwvutsrq", 20},
+		{"cap at block size 24", "24:ABCDEFGHIJ:abcdefghij", "24:ABCDEFGHIX:zyxwvutsrq", 80},
+		{"no cap at block size 96", "96:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef:ghijklmnop", "96:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdeX:zyxwvutsrq", 97},
+		{"cap at double block size", "6:ABCDEFGHIJKLMNOPQRST:abcdefghijklmnopqrst", "12:abcdefghijklmnopqrsX:ZYXWVUTSRQ", 80},
+		{"cap at half block size", "12:abcdefghijklmnopqrsX:ZYXWVUTSRQ", "6:ABCDEFGHIJKLMNOPQRST:abcdefghijklmnopqrst", 80},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d, err := Distance(tt.hash1, tt.hash2)
+			require.NoError(t, err)
+			assertDistanceEqual(t, tt.want, d)
+		})
+	}
+}
+
 func TestEmptyHash1(t *testing.T) {
 	d, err := Distance("", h2)
 	require.Error(t, err)

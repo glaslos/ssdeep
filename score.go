@@ -70,7 +70,7 @@ func splitSsdeep(hash string) (int, string, string, error) {
 	return blockSize, parts[1], parts[2], nil
 }
 
-func scoreDistance(h1, h2 string, _ int) int {
+func scoreDistance(h1, h2 string, blockSize int) int {
 	if !hasCommonSubstring(h1, h2) {
 		return 0
 	}
@@ -78,12 +78,20 @@ func scoreDistance(h1, h2 string, _ int) int {
 	d = (d * spamSumLength) / (len(h1) + len(h2))
 	d = (100 * d) / spamSumLength
 	d = 100 - d
-	/* TODO: Figure out this black magic...
-	matchSize := float64(blockSize) / float64(blockMin) * math.Min(float64(len(h1)), float64(len(h2)))
-	if d > int(matchSize) {
-		d = int(matchSize)
+
+	// A short hash of a small block size matches too easily. Below a block
+	// size of 45, the score cannot be higher than the block size in units of
+	// blockMin, times the length of the shorter hash (as in ssdeep 2.14.1).
+	if blockSize >= (99+rollingWindow)/rollingWindow*blockMin {
+		return d
 	}
-	*/
+	shorter := len(h1)
+	if len(h2) < shorter {
+		shorter = len(h2)
+	}
+	if matchSize := blockSize / blockMin * shorter; d > matchSize {
+		d = matchSize
+	}
 	return d
 }
 func hasCommonSubstring(s1, s2 string) bool {
