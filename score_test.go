@@ -63,6 +63,7 @@ func TestDistanceMatchesSsdeep(t *testing.T) {
 		{"no cap at block size 96", "96:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef:ghijklmnop", "96:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdeX:zyxwvutsrq", 97},
 		{"cap at double block size", "6:ABCDEFGHIJKLMNOPQRST:abcdefghijklmnopqrst", "12:abcdefghijklmnopqrsX:ZYXWVUTSRQ", 80},
 		{"cap at half block size", "12:abcdefghijklmnopqrsX:ZYXWVUTSRQ", "6:ABCDEFGHIJKLMNOPQRST:abcdefghijklmnopqrst", 80},
+		{"runs of more than three characters", "192:XYZXYZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABCDEFGHIJKLMNOP:qq", "192:XYZXYZAAAABCDEFGHIJKLMNOP:rr", 100},
 	}
 
 	for _, tt := range tests {
@@ -107,8 +108,8 @@ func TestInvalidHash2(t *testing.T) {
 
 // Crash seed: body length 65 triggers index out of range [58] with length 58.
 func TestHasCommonSubstringOOB(t *testing.T) {
-	s1 := "3:" + strings.Repeat("0", 65) + ":"
-	s2 := "3:0000000:"
+	s1 := "3:" + strings.Repeat("0123456789", 7)[:65] + ":"
+	s2 := "3:0123456:"
 	// Must not panic.
 	_, err := Distance(s1, s2)
 	if err != nil {
@@ -119,7 +120,7 @@ func TestHasCommonSubstringOOB(t *testing.T) {
 // FuzzSSDeepDistanceDirect feeds arbitrary hash strings directly to Distance.
 // The library must not panic; an error return is acceptable.
 func FuzzSSDeepDistanceDirect(f *testing.F) {
-	f.Add("3:"+strings.Repeat("0", 65)+":", "3:0000000:")
+	f.Add("3:"+strings.Repeat("0123456789", 7)[:65]+":", "3:0123456:")
 	f.Add("3:abc:abc", "3:abc:abc")
 	f.Add("", "")
 	f.Add("not-a-hash", "also-not-a-hash")

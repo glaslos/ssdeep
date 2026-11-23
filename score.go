@@ -31,6 +31,11 @@ func Distance(hash1, hash2 string) (int, error) {
 		return score, err
 	}
 
+	hash1String1 = eliminateSequences(hash1String1)
+	hash1String2 = eliminateSequences(hash1String2)
+	hash2String1 = eliminateSequences(hash2String1)
+	hash2String2 = eliminateSequences(hash2String2)
+
 	if hash1BlockSize == hash2BlockSize && hash1String1 == hash2String1 {
 		return 100, nil
 	}
@@ -68,6 +73,18 @@ func splitSsdeep(hash string) (int, string, string, error) {
 	}
 
 	return blockSize, parts[1], parts[2], nil
+}
+
+// eliminateSequences keeps at most three consecutive copies of a character,
+// as ssdeep does before it compares two hash parts.
+func eliminateSequences(s string) string {
+	out := make([]byte, 0, len(s))
+	for i := 0; i < len(s); i++ {
+		if i < 3 || s[i] != s[i-1] || s[i] != s[i-2] || s[i] != s[i-3] {
+			out = append(out, s[i])
+		}
+	}
+	return string(out)
 }
 
 func scoreDistance(h1, h2 string, blockSize int) int {
