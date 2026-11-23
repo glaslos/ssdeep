@@ -50,6 +50,37 @@ func TestHashDistance3(t *testing.T) {
 	assertDistanceEqual(t, 54, d)
 }
 
+// The expected scores come from "ssdeep -a -k" of ssdeep 2.14.1.
+func TestDistanceMatchesSsdeep(t *testing.T) {
+	tests := []struct {
+		name  string
+		hash1 string
+		hash2 string
+		want  int
+	}{
+		{"cap at block size 3", "3:ABCDEFGHIJKLMNOPQRST:abcdefghij", "3:ABCDEFGHIJKLMNOPQRSX:zyxwvutsrq", 20},
+		{"cap at block size 24", "24:ABCDEFGHIJ:abcdefghij", "24:ABCDEFGHIX:zyxwvutsrq", 80},
+		{"no cap at block size 96", "96:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef:ghijklmnop", "96:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdeX:zyxwvutsrq", 97},
+		{"cap at double block size", "6:ABCDEFGHIJKLMNOPQRST:abcdefghijklmnopqrst", "12:abcdefghijklmnopqrsX:ZYXWVUTSRQ", 80},
+		{"cap at half block size", "12:abcdefghijklmnopqrsX:ZYXWVUTSRQ", "6:ABCDEFGHIJKLMNOPQRST:abcdefghijklmnopqrst", 80},
+		{"cap at block size 0", "0:ABCDEFGHIJ:ABCDEFGHIJ", "0:ABCDEFGHIX:ABCDEFGHIX", 0},
+		{"no cap at a negative block size", "-3:ABCDEFGHIJ:ABCDEFGHIJ", "-3:ABCDEFGHIX:ABCDEFGHIX", 91},
+		{"runs of more than three characters", "192:XYZXYZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABCDEFGHIJKLMNOP:qq", "192:XYZXYZAAAABCDEFGHIJKLMNOP:rr", 100},
+		{"identical after the sequence elimination", "3:AAAAAABCDEFGHIJ:abc", "3:AAABCDEFGHIJ:abc", 100},
+		{"same first part, other second part", "3:ABCDEFGHIJ:abc", "3:ABCDEFGHIJ:xyz", 10},
+		{"same short first part, other second part", "48:ABC:abc", "48:ABC:xyz", 0},
+		{"identical short signatures", "3:ABC:abc", "3:ABC:abc", 100},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d, err := Distance(tt.hash1, tt.hash2)
+			require.NoError(t, err)
+			assertDistanceEqual(t, tt.want, d)
+		})
+	}
+}
+
 func TestEmptyHash1(t *testing.T) {
 	d, err := Distance("", h2)
 	require.Error(t, err)
@@ -83,8 +114,8 @@ func TestInvalidHash2(t *testing.T) {
 
 // Crash seed: body length 65 triggers index out of range [58] with length 58.
 func TestHasCommonSubstringOOB(t *testing.T) {
-	s1 := "3:" + strings.Repeat("0", 65) + ":"
-	s2 := "3:0000000:"
+	s1 := "3:" + strings.Repeat("0123456789", 7)[:65] + ":"
+	s2 := "3:0123456:"
 	// Must not panic.
 	_, err := Distance(s1, s2)
 	if err != nil {
@@ -95,14 +126,17 @@ func TestHasCommonSubstringOOB(t *testing.T) {
 // FuzzSSDeepDistanceDirect feeds arbitrary hash strings directly to Distance.
 // The library must not panic; an error return is acceptable.
 func FuzzSSDeepDistanceDirect(f *testing.F) {
-	f.Add("3:"+strings.Repeat("0", 65)+":", "3:0000000:")
+	f.Add("3:"+strings.Repeat("0123456789", 7)[:65]+":", "3:0123456:")
 	f.Add("3:abc:abc", "3:abc:abc")
 	f.Add("", "")
 	f.Add("not-a-hash", "also-not-a-hash")
 
 	f.Fuzz(func(t *testing.T, s1, s2 string) {
 		// Must not panic.
-		_, _ = Distance(s1, s2)
+		d, err := Distance(s1, s2)
+		if err == nil && (d < 0 || d > 100) {
+			t.Fatalf("Distance(%q, %q) = %d, want a score from 0 to 100", s1, s2, d)
+		}
 	})
 }
 
